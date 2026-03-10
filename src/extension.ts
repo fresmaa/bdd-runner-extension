@@ -5,6 +5,15 @@ import { spawn } from "child_process";
 type ScenarioContext = {
   scenarioName: string;
   scenarioLine: number;
+  isOutline: boolean;
+  exampleRows: ExampleRowContext[];
+};
+
+type ExampleRowContext = {
+  line: number;
+  label: string;
+  exampleValue: string;
+  exampleIndex: number;
 };
 
 type FeatureContext = {
@@ -24,6 +33,9 @@ type RunCommandInput = {
 type ScenarioLocation = {
   uri: vscode.Uri;
   line: number;
+  kind: "scenario" | "example";
+  exampleValue?: string;
+  exampleIndex?: number;
 };
 
 const TEST_CONTROLLER_ID = "bddScenarioRunner.controller";
@@ -201,6 +213,8 @@ function buildScenarioCommand(
   return buildCommand(template, {
     scenario: scenarioCtx.scenarioName,
     featureName: "",
+    example: "",
+    scenarioExampleRegex: "",
     featurePath: featurePathRelative,
     runMode,
   });
@@ -224,6 +238,8 @@ function buildFeatureCommand(
   return buildCommand(template, {
     scenario: "",
     featureName: featureCtx.featureName,
+    example: "",
+    scenarioExampleRegex: "",
     featurePath: featurePathRelative,
     runMode,
   });
@@ -238,6 +254,8 @@ function runRerunFailed(runMode: RunMode): void {
   const command = buildCommand(template, {
     scenario: "",
     featureName: "",
+    example: "",
+    scenarioExampleRegex: "",
     featurePath: "",
     runMode,
   });
@@ -330,6 +348,29 @@ function refreshTestItemsForDocument(document: vscode.TextDocument): void {
     TEST_DATA.set(item, {
       uri: document.uri,
       line: scenario.scenarioLine,
+      kind: "scenario",
+    });
+
+    scenario.exampleRows.forEach((exampleRow, index) => {
+      const exampleItem = testController.createTestItem(
+        `${itemId}:example:${exampleRow.line}`,
+        `Example ${index + 1}: ${exampleRow.label}`,
+        document.uri,
+      );
+      exampleItem.range = new vscode.Range(
+        exampleRow.line,
+        0,
+        exampleRow.line,
+        document.lineAt(exampleRow.line).text.length,
+      );
+      TEST_DATA.set(exampleItem, {
+        uri: document.uri,
+        line: exampleRow.line,
+        kind: "example",
+        exampleValue: exampleRow.exampleValue,
+        exampleIndex: exampleRow.exampleIndex,
+      });
+      item.children.add(exampleItem);
     });
 
     if (featureItem) {
@@ -353,10 +394,13 @@ function getScenarioContext(content: string, activeLineNumber: number): Scenario
   }
 
   const scenarioName = extractScenarioName(lines[scenarioLine]);
+  const isOutline = isScenarioOutlineLine(lines[scenarioLine]);
 
   return {
     scenarioName,
     scenarioLine,
+    isOutline,
+    exampleRows: isOutline ? collectExampleRows(lines, scenarioLine) : [],
   };
 }
 
@@ -370,9 +414,12 @@ function getAllScenarioContexts(content: string): ScenarioContext[] {
     }
 
     const scenarioName = extractScenarioName(lines[i]);
+    const isOutline = isScenarioOutlineLine(lines[i]);
     scenarios.push({
       scenarioName,
       scenarioLine: i,
+      isOutline,
+      exampleRows: isOutline ? collectExampleRows(lines, i) : [],
     });
   }
 
@@ -417,8 +464,89 @@ function isScenarioLine(line: string): boolean {
   return /^\s*Scenario(?: Outline)?:/i.test(line);
 }
 
+function isScenarioOutlineLine(line: string): boolean {
+  return /^\s*Scenario\s+Outline:/i.test(line);
+}
+
 function extractScenarioName(line: string): string {
   return line.replace(/^\s*Scenario(?: Outline)?:\s*/i, "").trim() || "Unnamed Scenario";
+}
+
+function collectExampleRows(lines: string[], scenarioLine: number): ExampleRowContext[] {
+  const rows: ExampleRowContext[] = [];
+  let inExamples = false;
+  let header: string[] = [];
+
+  for (let i = scenarioLine + 1; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+
+    if (isScenarioLine(raw)) {
+      break;
+    }
+
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    if (/^Examples?:/i.test(trimmed)) {
+      inExamples = true;
+      header = [];
+      continue;
+    }
+
+    if (!inExamples) {
+      continue;
+    }
+
+    if (!trimmed.startsWith("|")) {
+      continue;
+    }
+
+    const cells = parseExamplesCells(trimmed);
+    if (cells.length === 0) {
+      continue;
+    }
+
+    if (header.length === 0) {
+      header = cells;
+      continue;
+    }
+
+    const firstNonEmpty = cells.find((cell) => cell.length > 0) ?? cells.join(" | ");
+    const labelParts = cells
+      .map((cell, idx) => `${header[idx] ?? `col${idx + 1}`}=${cell}`)
+      .filter((part) => !part.endsWith("="));
+
+    rows.push({
+      line: i,
+      label: labelParts.length > 0 ? labelParts.join(", ") : firstNonEmpty,
+      exampleValue: normalizeExampleValue(firstNonEmpty),
+      exampleIndex: rows.length + 1,
+    });
+  }
+
+  return rows;
+}
+
+function parseExamplesCells(row: string): string[] {
+  const withoutEdges = row.replace(/^\|/, "").replace(/\|$/, "");
+  return withoutEdges.split("|").map((cell) => cell.trim());
+}
+
+function normalizeExampleValue(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) {
+    return trimmed;
+  }
+
+  const first = trimmed[0];
+  const last = trimmed[trimmed.length - 1];
+  if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
 }
 
 function shellQuote(value: string): string {
@@ -442,6 +570,8 @@ function buildCommand(
   values: {
     scenario: string;
     featureName: string;
+    example: string;
+    scenarioExampleRegex: string;
     featurePath: string;
     runMode: RunMode;
   },
@@ -452,6 +582,10 @@ function buildCommand(
     "{scenarioQuoted}": shellQuote(values.scenario),
     "{featureName}": values.featureName,
     "{featureNameQuoted}": shellQuote(values.featureName),
+    "{example}": values.example,
+    "{exampleQuoted}": shellQuote(values.example),
+    "{scenarioExampleRegex}": values.scenarioExampleRegex,
+    "{scenarioExampleRegexQuoted}": shellQuote(values.scenarioExampleRegex),
     "{featurePath}": values.featurePath,
     "{featurePathQuoted}": shellQuote(values.featurePath),
     "{runMode}": values.runMode,
@@ -517,7 +651,10 @@ async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode
       }
 
       run.started(item);
-      const command = buildScenarioCommand(doc, ctx, runMode);
+      const command =
+        scenarioRef.kind === "example" && scenarioRef.exampleIndex
+          ? buildExampleCommand(doc, ctx, scenarioRef.exampleIndex, runMode)
+          : buildScenarioCommand(doc, ctx, runMode);
       const cwd = vscode.workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath;
 
       let outputBuffer = `$ ${command}\r\n`;
@@ -554,6 +691,43 @@ async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode
   }
 
   run.end();
+}
+
+function buildExampleCommand(
+  document: vscode.TextDocument,
+  scenarioCtx: ScenarioContext,
+  exampleIndex: number,
+  runMode: RunMode,
+): string {
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  const template = config.get<string>(
+    "exampleCommandTemplate",
+    "pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
+  );
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+  const featurePathRelative = workspaceFolder
+    ? path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
+    : document.uri.fsPath;
+  const scenarioExampleRegex = buildScenarioExampleRegex(scenarioCtx.scenarioName, exampleIndex);
+
+  return buildCommand(template, {
+    scenario: scenarioCtx.scenarioName,
+    featureName: "",
+    example: `Example #${exampleIndex}`,
+    scenarioExampleRegex,
+    featurePath: featurePathRelative,
+    runMode,
+  });
+}
+
+function buildScenarioExampleRegex(scenarioName: string, exampleIndex: number): string {
+  const escapedScenario = escapeRegex(scenarioName);
+  const escapedExampleIndex = escapeRegex(`Example #${exampleIndex}`);
+  return `(?=.*${escapedScenario})(?=.*${escapedExampleIndex})`;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function executeCommandWithOutput(

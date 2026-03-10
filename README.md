@@ -1,76 +1,105 @@
-# BDD Scenario Runner Extension
+# BDD Scenario Runner
 
-VS Code extension internal untuk menjalankan scenario `.feature` cukup dengan 1 klik tombol.
+`BDD Scenario Runner` is a Visual Studio Code extension that executes Playwright BDD tests directly from Gherkin `.feature` files.
 
-## Fitur
+It is designed for fast local feedback, minimal context switching, and consistent execution across different terminal shells.
 
-- Tombol `Run Current Scenario Tag` di title bar editor file `.feature`
-- Ikon `Run` (start/play) di gutter kiri setiap baris `Scenario`
-- Command palette: `BDD Runner: Run Current Scenario`
-- Command palette: `BDD Runner: Run Current Feature`
-- Command palette: `BDD Runner: Re-run Failed`
-- Otomatis membaca scenario aktif berdasarkan posisi cursor
-- Menjalankan berdasarkan nama scenario agar tidak bentrok tag
-- Menampilkan output log run di Test Results
-- Auto-detect shell (PowerShell, Git Bash, CMD) agar command quoting tetap aman
-- Opsi mode saat run: `Headless` atau `Headed`
-- Default run extension tidak membuka HTML report
-- Menjalankan command default:
+## Overview
+
+- Execute the current scenario from the editor or command palette.
+- Execute all scenarios in the current feature file.
+- Re-run failed tests in one action.
+- Run individual `Scenario Outline` example rows from the Testing view.
+- Keep command quoting safe across PowerShell, CMD, and Bash.
+
+## Capability Matrix
+
+| Capability | Description |
+| --- | --- |
+| Current scenario run | Detects scenario from cursor position and runs it immediately |
+| Current feature run | Runs all scenarios in the active `.feature` file |
+| Re-run failed | Uses Playwright's last failed filter |
+| Scenario Outline support | Generates run items per `Examples` row |
+| Run mode selection | Supports `headless` and `headed` execution |
+| Configurable templates | Supports placeholder-based command customization |
+
+## Available Commands
+
+| Command | Purpose |
+| --- | --- |
+| `BDD Runner: Run Current Scenario` | Run scenario at the active cursor context |
+| `BDD Runner: Run Current Feature` | Run all scenarios in current feature file |
+| `BDD Runner: Re-run Failed` | Re-run failed test cases from previous run |
+
+## Default Command Templates
 
 ```bash
-pnpm bddgen && pnpm playwright test --grep "ASN successfully accesses the INAgov portal and verifies UI components" --headed
+# Scenario
+pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}
+
+# Feature
+pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}
+
+# Example row (Scenario Outline)
+pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}
+
+# Re-run failed
+pnpm bddgen && pnpm playwright test --last-failed{headedFlag}
 ```
 
-## Cara Pakai
+## Usage
 
-1. Buka file `.feature`.
-2. Letakkan cursor di dalam scenario yang ingin dijalankan.
-3. Klik tombol play `Run Current Scenario` di pojok kanan atas editor.
-4. Atau klik ikon `Run` di kiri baris `Scenario`.
-5. Pilih mode `Headless` atau `Headed`.
-6. Extension menjalankan command test di terminal `BDD Scenario Runner`.
+1. Open a `.feature` file.
+2. Place the cursor inside a `Scenario` or `Scenario Outline`.
+3. Trigger execution from editor title, command palette, or Testing panel.
+4. Select run mode (`Headless` or `Headed`) when prompted.
+5. Review output in the `BDD Scenario Runner` terminal and Testing results.
 
-Untuk run semua scenario dalam satu file feature, gunakan command `BDD Runner: Run Current Feature`.
+## Configuration Reference
 
-## Konfigurasi
+Search for `bddScenarioRunner` in VS Code Settings.
 
-Bisa diubah lewat `Settings`:
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bddScenarioRunner.commandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}` | Template for current scenario runs |
+| `bddScenarioRunner.featureCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}` | Template for feature-level runs |
+| `bddScenarioRunner.exampleCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}` | Template for `Scenario Outline` example-row runs |
+| `bddScenarioRunner.rerunFailedCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --last-failed{headedFlag}` | Template for failed-test reruns |
+| `bddScenarioRunner.terminalName` | `string` | `BDD Scenario Runner` | Terminal name used by the extension |
+| `bddScenarioRunner.autoClearTerminal` | `boolean` | `true` | Clears terminal before each execution |
+| `bddScenarioRunner.showTerminalOnRun` | `boolean` | `false` | Reveals terminal automatically on run |
+| `bddScenarioRunner.askRunMode` | `boolean` | `true` | Prompts mode selection for each run |
+| `bddScenarioRunner.defaultRunMode` | `headless \| headed` | `headless` | Fallback mode when prompt is disabled |
 
-- `bddScenarioRunner.commandTemplate`
-  - Default: `pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}`
-  - Placeholder: `{scenario}`, `{scenarioQuoted}`, `{featurePath}`, `{featurePathQuoted}`, `{runMode}`, `{headedFlag}`
-- `bddScenarioRunner.featureCommandTemplate`
-  - Default: `pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}`
-  - Placeholder: `{featureName}`, `{featureNameQuoted}`, `{featurePath}`, `{featurePathQuoted}`, `{runMode}`, `{headedFlag}`
-- `bddScenarioRunner.rerunFailedCommandTemplate`
-  - Default: `pnpm bddgen && pnpm playwright test --last-failed{headedFlag}`
-- `bddScenarioRunner.terminalName`
-  - Default: `BDD Scenario Runner`
-- `bddScenarioRunner.autoClearTerminal`
-  - Default: `true`
-- `bddScenarioRunner.showTerminalOnRun`
-  - Default: `false`
-- `bddScenarioRunner.askRunMode`
-  - Default: `true`
-- `bddScenarioRunner.defaultRunMode`
-  - Default: `headless`
+## Placeholder Reference
 
-## Build VSIX (untuk dibagikan ke tim)
+- `{scenario}` / `{scenarioQuoted}`
+- `{featureName}` / `{featureNameQuoted}`
+- `{example}` / `{exampleQuoted}`
+- `{scenarioExampleRegex}` / `{scenarioExampleRegexQuoted}`
+- `{featurePath}` / `{featurePathQuoted}`
+- `{runMode}`
+- `{headedFlag}`
+
+## Build and Package
 
 ```bash
-cd d:/QA/bdd-runner-extension
+cd /path/to/bdd-runner-extension
 npm install
 npm run compile
 npm run package
 ```
 
-File `.vsix` akan terbuat di folder ini, lalu bisa dibagikan ke tim.
+Packaging generates a `.vsix` artifact in the project root.
 
-## Install VSIX
+## Install from VSIX
 
-Di VS Code:
+1. Open `Extensions` in VS Code.
+2. Select `...` (More Actions).
+3. Click `Install from VSIX...`.
+4. Choose the generated `.vsix` file.
 
-1. Buka `Extensions`
-2. Klik `...` (More Actions)
-3. Pilih `Install from VSIX...`
-4. Pilih file `.vsix`
+## Compatibility Notes
+
+- Intended for Playwright + Gherkin BDD projects.
+- On PowerShell profiles, command chaining is normalized for reliable execution.

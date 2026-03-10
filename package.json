@@ -2,8 +2,8 @@
   "name": "bdd-scenario-runner-extension",
   "displayName": "BDD Scenario Runner",
   "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
-  "version": "0.1.20",
-  "publisher": "fresma-labs.space",
+  "version": "0.1.23",
+  "publisher": "fresma-labs-space",
   "license": "MIT",
   "private": true,
   "engines": {
@@ -82,6 +82,11 @@
           "type": "string",
           "default": "pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}",
           "description": "Feature run template. Placeholders: {featureName}, {featureNameQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+        },
+        "bddScenarioRunner.exampleCommandTemplate": {
+          "type": "string",
+          "default": "pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
+          "description": "Example row run template. Placeholders: {scenario}, {scenarioQuoted}, {example}, {exampleQuoted}, {scenarioExampleRegex}, {scenarioExampleRegexQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
         },
         "bddScenarioRunner.rerunFailedCommandTemplate": {
           "type": "string",
