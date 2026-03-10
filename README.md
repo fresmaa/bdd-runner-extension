@@ -96,6 +96,30 @@ npm run package
 
 Packaging generates a `.vsix` artifact in the project root.
 
+## Publish to Visual Studio Marketplace
+
+1. Create a publisher in Marketplace Management if not already available: `fresma-labs-space`.
+2. Create a Personal Access Token (PAT) with `Marketplace > Manage` scope.
+3. Set PAT in terminal session.
+
+```powershell
+$env:VSCE_PAT = "<your-pat>"
+```
+
+4. Publish from project root.
+
+```bash
+# Publish current version from package.json
+npm run publish
+
+# Auto-bump + publish
+npm run publish:patch
+npm run publish:minor
+npm run publish:major
+```
+
+If the extension was never published before, make sure `publisher` in `package.json` matches your Marketplace publisher ID exactly.
+
 ## Install from VSIX
 
 1. Open `Extensions` in VS Code.
