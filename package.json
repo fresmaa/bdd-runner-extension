@@ -1,0 +1,134 @@
+{
+  "name": "bdd-scenario-runner-extension",
+  "displayName": "BDD Scenario Runner",
+  "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
+  "version": "0.1.20",
+  "publisher": "fresma-labs.space",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Testing"
+  ],
+  "activationEvents": [
+    "onLanguage:feature",
+    "onCommand:bddScenarioRunner.runScenarioTag",
+    "onCommand:bddScenarioRunner.runScenarioTagAtLine",
+    "onCommand:bddScenarioRunner.runCurrentFeature",
+    "onCommand:bddScenarioRunner.rerunFailed"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bddScenarioRunner.runScenarioTag",
+        "title": "BDD Runner: Run Current Scenario"
+      },
+      {
+        "command": "bddScenarioRunner.runScenarioTagAtLine",
+        "title": "BDD Runner: Run Scenario at Line"
+      },
+      {
+        "command": "bddScenarioRunner.runCurrentFeature",
+        "title": "BDD Runner: Run Current Feature"
+      },
+      {
+        "command": "bddScenarioRunner.rerunFailed",
+        "title": "BDD Runner: Re-run Failed"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "bddScenarioRunner.runScenarioTag",
+          "when": "resourceExtname == .feature",
+          "group": "navigation@20"
+        },
+        {
+          "command": "bddScenarioRunner.runCurrentFeature",
+          "when": "resourceExtname == .feature",
+          "group": "navigation@21"
+        },
+        {
+          "command": "bddScenarioRunner.rerunFailed",
+          "group": "navigation@22"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "bddScenarioRunner.runScenarioTag",
+          "when": "resourceExtname == .feature"
+        },
+        {
+          "command": "bddScenarioRunner.runCurrentFeature",
+          "when": "resourceExtname == .feature"
+        },
+        {
+          "command": "bddScenarioRunner.rerunFailed"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "BDD Scenario Runner",
+      "properties": {
+        "bddScenarioRunner.commandTemplate": {
+          "type": "string",
+          "default": "pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}",
+          "description": "Scenario run template. Placeholders: {scenario}, {scenarioQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+        },
+        "bddScenarioRunner.featureCommandTemplate": {
+          "type": "string",
+          "default": "pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}",
+          "description": "Feature run template. Placeholders: {featureName}, {featureNameQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+        },
+        "bddScenarioRunner.rerunFailedCommandTemplate": {
+          "type": "string",
+          "default": "pnpm bddgen && pnpm playwright test --last-failed{headedFlag}",
+          "description": "Re-run failed template. Placeholders: {runMode}, {headedFlag}."
+        },
+        "bddScenarioRunner.terminalName": {
+          "type": "string",
+          "default": "BDD Scenario Runner",
+          "description": "Terminal name used to run BDD scenarios."
+        },
+        "bddScenarioRunner.autoClearTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Clear terminal before running a new scenario command."
+        },
+        "bddScenarioRunner.showTerminalOnRun": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically reveal terminal when starting a run."
+        },
+        "bddScenarioRunner.askRunMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask whether to run in headless or headed mode each time."
+        },
+        "bddScenarioRunner.defaultRunMode": {
+          "type": "string",
+          "enum": [
+            "headless",
+            "headed"
+          ],
+          "default": "headless",
+          "description": "Default run mode when askRunMode is disabled."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.2",
+    "typescript": "^5.8.3"
+  }
+}
