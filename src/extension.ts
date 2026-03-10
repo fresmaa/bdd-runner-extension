@@ -287,9 +287,26 @@ function runCommandInTerminal(command: string, cwd: vscode.Uri | undefined): voi
 }
 
 function getOrCreateTerminal(name: string, cwd: vscode.Uri | undefined): vscode.Terminal {
+  const dialect = detectShellDialect();
   const existing = vscode.window.terminals.find((terminal) => terminal.name === name);
-  if (existing) {
+
+  // If Windows default profile resolves to bash, force a fresh PowerShell terminal
+  // to avoid failing on machines without WSL/Git Bash runtime.
+  if (existing && !(process.platform === "win32" && dialect === "bash")) {
     return existing;
+  }
+
+  if (existing && process.platform === "win32" && dialect === "bash") {
+    existing.dispose();
+  }
+
+  if (process.platform === "win32" && dialect === "bash") {
+    return vscode.window.createTerminal({
+      name,
+      cwd,
+      shellPath: "powershell.exe",
+      shellArgs: ["-NoProfile"],
+    });
   }
 
   if (cwd) {
@@ -783,6 +800,8 @@ function detectShellDialect(): ShellDialect {
     .toLowerCase();
 
   if (profile.includes("bash")) {
+    // Keep this branch so terminal creation can detect and override broken bash
+    // profiles on Windows, but command execution will still use PowerShell.
     return "bash";
   }
   if (profile.includes("command prompt") || profile.includes("cmd")) {
@@ -828,6 +847,16 @@ function getShellExecution(
   command: string,
   dialect: ShellDialect,
 ): { shell: string; args: string[] } {
+
+  if (process.platform === "win32") {
+    if (dialect === "cmd") {
+      return { shell: "cmd.exe", args: ["/d", "/c", command] };
+    }
+    return {
+      shell: "powershell.exe",
+      args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+    };
+  }
 
   if (dialect === "bash") {
     return { shell: "bash", args: ["-lc", command] };
