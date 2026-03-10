@@ -30,6 +30,7 @@ It is designed for fast local feedback, minimal context switching, and consisten
 | `BDD Runner: Run Current Scenario` | Run scenario at the active cursor context |
 | `BDD Runner: Run Current Feature` | Run all scenarios in current feature file |
 | `BDD Runner: Re-run Failed` | Re-run failed test cases from previous run |
+| `BDD Runner: Diagnose Environment` | Validate shell/tool runtime and print diagnostics |
 
 ## Default Command Templates
 
@@ -70,6 +71,9 @@ Search for `bddScenarioRunner` in VS Code Settings.
 | `bddScenarioRunner.showTerminalOnRun` | `boolean` | `false` | Reveals terminal automatically on run |
 | `bddScenarioRunner.askRunMode` | `boolean` | `true` | Prompts mode selection for each run |
 | `bddScenarioRunner.defaultRunMode` | `headless \| headed` | `headless` | Fallback mode when prompt is disabled |
+| `bddScenarioRunner.forceShell` | `auto \| git-bash \| pwsh \| powershell \| cmd \| bash` | `auto` | Force shell runtime with fallback logic |
+| `bddScenarioRunner.gitBashPath` | `string` | `` | Optional absolute path to `bash.exe` on Windows |
+| `bddScenarioRunner.pwshPath` | `string` | `pwsh` | Command/path used when `forceShell = pwsh` |
 
 ## Placeholder Reference
 
@@ -102,4 +106,8 @@ Packaging generates a `.vsix` artifact in the project root.
 ## Compatibility Notes
 
 - Intended for Playwright + Gherkin BDD projects.
-- On PowerShell profiles, command chaining is normalized for reliable execution.
+- PowerShell 5 and PowerShell 7 are both supported.
+- On PowerShell 5 profiles, `&&` command chains are converted to fail-fast PowerShell-compatible chaining.
+- On PowerShell 7 (`pwsh`), commands run natively without `&&` rewriting.
+- With `forceShell = auto`, the extension resolves shell per OS and falls back safely when a runtime is missing.
+- If you force `git-bash` on Windows without Git Bash installed, it falls back to PowerShell and shows a warning.

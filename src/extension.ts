@@ -1,6 +1,7 @@
 ﻿import * as path from "path";
 import * as vscode from "vscode";
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
+import * as fs from "fs";
 
 type ScenarioContext = {
   scenarioName: string;
@@ -22,6 +23,7 @@ type FeatureContext = {
 };
 
 type ShellDialect = "bash" | "powershell" | "cmd" | "posix";
+type ForceShell = "auto" | "git-bash" | "pwsh" | "powershell" | "cmd" | "bash";
 
 type RunMode = "headless" | "headed";
 
@@ -40,6 +42,7 @@ type ScenarioLocation = {
 
 const TEST_CONTROLLER_ID = "bddScenarioRunner.controller";
 const TEST_DATA = new WeakMap<vscode.TestItem, ScenarioLocation>();
+const SHOWN_SHELL_WARNINGS = new Set<string>();
 
 let testController: vscode.TestController;
 
@@ -94,6 +97,13 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       runRerunFailed(runMode);
+    },
+  );
+
+  const diagnoseEnvironment = vscode.commands.registerCommand(
+    "bddScenarioRunner.diagnoseEnvironment",
+    async () => {
+      await runEnvironmentDiagnosis();
     },
   );
 
@@ -160,6 +170,7 @@ export function activate(context: vscode.ExtensionContext): void {
     runScenarioTagAtLine,
     runCurrentFeature,
     rerunFailed,
+    diagnoseEnvironment,
     openDocDisposable,
     changeDocDisposable,
     closeDocDisposable,
@@ -287,25 +298,28 @@ function runCommandInTerminal(command: string, cwd: vscode.Uri | undefined): voi
 }
 
 function getOrCreateTerminal(name: string, cwd: vscode.Uri | undefined): vscode.Terminal {
-  const dialect = detectShellDialect();
+  const configuredDialect = detectShellDialect();
+  const terminalShell = resolveTerminalShell(configuredDialect);
   const existing = vscode.window.terminals.find((terminal) => terminal.name === name);
 
-  // If Windows default profile resolves to bash, force a fresh PowerShell terminal
-  // to avoid failing on machines without WSL/Git Bash runtime.
-  if (existing && !(process.platform === "win32" && dialect === "bash")) {
+  if (existing && !terminalShell.recreateExisting) {
     return existing;
   }
 
-  if (existing && process.platform === "win32" && dialect === "bash") {
+  if (existing && terminalShell.recreateExisting) {
     existing.dispose();
   }
 
-  if (process.platform === "win32" && dialect === "bash") {
+  if (terminalShell.warningKey && terminalShell.warningMessage) {
+    showWarningOnce(terminalShell.warningKey, terminalShell.warningMessage);
+  }
+
+  if (terminalShell.shellPath) {
     return vscode.window.createTerminal({
       name,
       cwd,
-      shellPath: "powershell.exe",
-      shellArgs: ["-NoProfile"],
+      shellPath: terminalShell.shellPath,
+      shellArgs: terminalShell.shellArgs,
     });
   }
 
@@ -790,6 +804,24 @@ function executeCommandWithOutput(
 }
 
 function detectShellDialect(): ShellDialect {
+  const forceShell = getConfiguredForceShell();
+
+  if (forceShell !== "auto") {
+    if ((forceShell === "git-bash" || forceShell === "bash") && process.platform === "win32") {
+      if (!resolveGitBashPath()) {
+        return "powershell";
+      }
+    }
+
+    if (forceShell === "pwsh") {
+      if (!isExecutableAvailable(resolvePwshPath())) {
+        return process.platform === "win32" ? "powershell" : "posix";
+      }
+    }
+
+    return mapForceShellToDialect(forceShell);
+  }
+
   if (process.platform !== "win32") {
     return "posix";
   }
@@ -800,9 +832,7 @@ function detectShellDialect(): ShellDialect {
     .toLowerCase();
 
   if (profile.includes("bash")) {
-    // Keep this branch so terminal creation can detect and override broken bash
-    // profiles on Windows, but command execution will still use PowerShell.
-    return "bash";
+    return resolveGitBashPath() ? "bash" : "powershell";
   }
   if (profile.includes("command prompt") || profile.includes("cmd")) {
     return "cmd";
@@ -812,11 +842,26 @@ function detectShellDialect(): ShellDialect {
 }
 
 function normalizeCommandForDialect(command: string, dialect: ShellDialect): string {
-  if (dialect === "powershell") {
-    return command.replace(/\s*&&\s*/g, "; ");
+  // Only Windows PowerShell 5.1 needs && emulation.
+  if (dialect === "powershell" && shouldUseLegacyWindowsPowerShell()) {
+    return normalizePowerShellChain(command);
   }
 
   return command;
+}
+
+function normalizePowerShellChain(command: string): string {
+  const parts = command
+    .split(/\s*&&\s*/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+  if (parts.length <= 1) {
+    return command;
+  }
+
+  const joined = parts.join("; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; ");
+  return `${joined}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`;
 }
 
 function stripAnsi(input: string): string {
@@ -847,13 +892,77 @@ function getShellExecution(
   command: string,
   dialect: ShellDialect,
 ): { shell: string; args: string[] } {
+  const forceShell = getConfiguredForceShell();
 
   if (process.platform === "win32") {
     if (dialect === "cmd") {
       return { shell: "cmd.exe", args: ["/d", "/c", command] };
     }
+
+    if (forceShell === "git-bash" || forceShell === "bash") {
+      const gitBash = resolveGitBashPath();
+      if (gitBash) {
+        return { shell: gitBash, args: ["-lc", command] };
+      }
+
+      showWarningOnce(
+        "missing-git-bash",
+        "BDD Runner: forced shell is Git Bash, but bash was not found. Falling back to PowerShell.",
+      );
+    }
+
+    if (forceShell === "pwsh") {
+      const pwshPath = resolvePwshPath();
+      if (!isExecutableAvailable(pwshPath)) {
+        showWarningOnce(
+          "missing-pwsh",
+          "BDD Runner: forced shell is pwsh, but executable was not found. Falling back to PowerShell.",
+        );
+        return {
+          shell: "powershell.exe",
+          args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+        };
+      }
+
+      return {
+        shell: pwshPath,
+        args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      };
+    }
+
+    if (dialect === "bash") {
+      const gitBash = resolveGitBashPath();
+      if (gitBash) {
+        return { shell: gitBash, args: ["-lc", command] };
+      }
+    }
+
+    if (dialect === "powershell") {
+      const shell = resolvePowerShellExecutableForAuto();
+      return {
+        shell,
+        args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      };
+    }
+
     return {
       shell: "powershell.exe",
+      args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+    };
+  }
+
+  if (forceShell === "pwsh") {
+    const pwshPath = resolvePwshPath();
+    if (!isExecutableAvailable(pwshPath)) {
+      showWarningOnce(
+        "missing-pwsh-nonwin",
+        "BDD Runner: forced shell is pwsh, but executable was not found. Falling back to POSIX shell.",
+      );
+      return { shell: "sh", args: ["-c", command] };
+    }
+
+    return {
+      shell: pwshPath,
       args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
     };
   }
@@ -872,6 +981,255 @@ function getShellExecution(
   }
 
   return { shell: "sh", args: ["-c", command] };
+}
+
+function getConfiguredForceShell(): ForceShell {
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  return config.get<ForceShell>("forceShell", "auto");
+}
+
+function resolvePowerShellExecutableForAuto(): string {
+  const forceShell = getConfiguredForceShell();
+  if (forceShell === "pwsh") {
+    const pwshPath = resolvePwshPath();
+    if (isExecutableAvailable(pwshPath)) {
+      return pwshPath;
+    }
+    return "powershell.exe";
+  }
+  if (forceShell === "powershell") {
+    return "powershell.exe";
+  }
+
+  if (process.platform !== "win32") {
+    return resolvePwshPath();
+  }
+
+  const profile = vscode.workspace
+    .getConfiguration("terminal.integrated")
+    .get<string>("defaultProfile.windows", "")
+    .toLowerCase();
+
+  // Prefer pwsh when profile hints to modern PowerShell.
+  if ((profile.includes("pwsh") || profile.includes("powershell")) && !profile.includes("windows")) {
+    const pwshPath = resolvePwshPath();
+    if (isExecutableAvailable(pwshPath)) {
+      return pwshPath;
+    }
+  }
+
+  return "powershell.exe";
+}
+
+function shouldUseLegacyWindowsPowerShell(): boolean {
+  if (process.platform !== "win32") {
+    return false;
+  }
+
+  const forceShell = getConfiguredForceShell();
+  if (forceShell === "pwsh") {
+    return false;
+  }
+  if (forceShell === "powershell") {
+    return true;
+  }
+
+  return resolvePowerShellExecutableForAuto().toLowerCase().includes("powershell.exe");
+}
+
+function mapForceShellToDialect(forceShell: ForceShell): ShellDialect {
+  if (forceShell === "cmd") {
+    return "cmd";
+  }
+  if (forceShell === "bash" || forceShell === "git-bash") {
+    return "bash";
+  }
+  if (forceShell === "pwsh" || forceShell === "powershell") {
+    return "powershell";
+  }
+
+  if (process.platform === "win32") {
+    return "powershell";
+  }
+  return "posix";
+}
+
+function resolvePwshPath(): string {
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  return config.get<string>("pwshPath", "pwsh");
+}
+
+function isExecutableAvailable(executable: string): boolean {
+  try {
+    const probeArgs = executable.toLowerCase().includes("cmd") ? ["/d", "/c", "echo", "ok"] : ["--version"];
+    const result = spawnSync(executable, probeArgs, { stdio: "ignore" });
+    return !result.error;
+  } catch {
+    return false;
+  }
+}
+
+function resolveGitBashPath(): string | undefined {
+  if (process.platform !== "win32") {
+    return undefined;
+  }
+
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  const configured = config.get<string>("gitBashPath", "").trim();
+  if (configured.length > 0 && fs.existsSync(configured)) {
+    return configured;
+  }
+
+  const defaults = [
+    "C:/Program Files/Git/bin/bash.exe",
+    "C:/Program Files (x86)/Git/bin/bash.exe",
+  ];
+
+  for (const candidate of defaults) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function resolveTerminalShell(dialect: ShellDialect): {
+  shellPath?: string;
+  shellArgs?: string[];
+  recreateExisting: boolean;
+  warningKey?: string;
+  warningMessage?: string;
+} {
+  const forceShell = getConfiguredForceShell();
+
+  if (process.platform === "win32" && (forceShell === "git-bash" || forceShell === "bash")) {
+    const gitBash = resolveGitBashPath();
+    if (gitBash) {
+      return {
+        shellPath: gitBash,
+        shellArgs: ["--login", "-i"],
+        recreateExisting: true,
+      };
+    }
+
+    return {
+      shellPath: "powershell.exe",
+      shellArgs: ["-NoProfile"],
+      recreateExisting: true,
+      warningKey: "missing-git-bash-terminal",
+      warningMessage:
+        "BDD Runner: forced shell is Git Bash, but bash was not found. Terminal falls back to PowerShell.",
+    };
+  }
+
+  if (process.platform === "win32" && forceShell === "pwsh") {
+    const pwshPath = resolvePwshPath();
+    if (!isExecutableAvailable(pwshPath)) {
+      return {
+        shellPath: "powershell.exe",
+        shellArgs: ["-NoProfile"],
+        recreateExisting: true,
+        warningKey: "missing-pwsh-terminal",
+        warningMessage:
+          "BDD Runner: forced shell is pwsh, but executable was not found. Terminal falls back to PowerShell.",
+      };
+    }
+
+    return {
+      shellPath: pwshPath,
+      shellArgs: ["-NoProfile"],
+      recreateExisting: true,
+    };
+  }
+
+  // Auto fallback for Windows profile pointing to bash when runtime is not available.
+  if (process.platform === "win32" && forceShell === "auto" && dialect === "bash") {
+    const gitBash = resolveGitBashPath();
+    if (gitBash) {
+      return {
+        shellPath: gitBash,
+        shellArgs: ["--login", "-i"],
+        recreateExisting: false,
+      };
+    }
+
+    return {
+      shellPath: "powershell.exe",
+      shellArgs: ["-NoProfile"],
+      recreateExisting: true,
+      warningKey: "auto-bash-fallback-terminal",
+      warningMessage:
+        "BDD Runner: VS Code default profile is bash, but bash was not found. Terminal falls back to PowerShell.",
+    };
+  }
+
+  return { recreateExisting: false };
+}
+
+function showWarningOnce(key: string, message: string): void {
+  if (SHOWN_SHELL_WARNINGS.has(key)) {
+    return;
+  }
+  SHOWN_SHELL_WARNINGS.add(key);
+  vscode.window.showWarningMessage(message);
+}
+
+async function runEnvironmentDiagnosis(): Promise<void> {
+  const output = vscode.window.createOutputChannel("BDD Runner Diagnose");
+  output.clear();
+  output.show(true);
+
+  const forceShell = getConfiguredForceShell();
+  const dialect = detectShellDialect();
+  const config = vscode.workspace.getConfiguration("terminal.integrated");
+  const defaultWindowsProfile = config.get<string>("defaultProfile.windows", "");
+
+  output.appendLine("BDD Runner Environment Diagnose");
+  output.appendLine("================================");
+  output.appendLine(`Platform: ${process.platform}`);
+  output.appendLine(`Configured forceShell: ${forceShell}`);
+  output.appendLine(`Effective shell dialect: ${dialect}`);
+  if (process.platform === "win32") {
+    output.appendLine(`VS Code defaultProfile.windows: ${defaultWindowsProfile || "(empty)"}`);
+    output.appendLine(`Configured gitBashPath: ${resolveGitBashPath() ?? "(not found)"}`);
+    output.appendLine(`Configured pwshPath: ${resolvePwshPath()}`);
+  }
+  output.appendLine("");
+
+  const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspace) {
+    output.appendLine("No workspace folder open. Runtime checks skipped.");
+    return;
+  }
+
+  const checks = [
+    "pnpm --version",
+    "pnpm exec playwright --version",
+    "pnpm exec bddgen --help",
+  ];
+
+  for (const check of checks) {
+    const lines: string[] = [];
+    const result = await executeCommandWithOutput(check, workspace, (line) => {
+      if (lines.length < 20) {
+        lines.push(line);
+      }
+    });
+
+    output.appendLine(`$ ${check}`);
+    output.appendLine(`Result: ${result.success ? "OK" : "FAILED"}`);
+    if (result.errorMessage) {
+      output.appendLine(`Error: ${result.errorMessage}`);
+    }
+    if (lines.length > 0) {
+      output.appendLine("Output:");
+      lines.forEach((line) => output.appendLine(`  ${line}`));
+    }
+    output.appendLine("");
+  }
+
+  vscode.window.showInformationMessage("BDD Runner diagnose completed. Check 'BDD Runner Diagnose' output.");
 }
 
 function collectTestItems(request: vscode.TestRunRequest): vscode.TestItem[] {

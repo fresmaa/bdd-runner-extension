@@ -2,7 +2,7 @@
   "name": "bdd-scenario-runner-extension",
   "displayName": "BDD Scenario Runner",
   "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
-  "version": "0.1.24",
+  "version": "0.1.27",
   "publisher": "fresma-labs-space",
   "license": "MIT",
   "private": true,
@@ -17,7 +17,8 @@
     "onCommand:bddScenarioRunner.runScenarioTag",
     "onCommand:bddScenarioRunner.runScenarioTagAtLine",
     "onCommand:bddScenarioRunner.runCurrentFeature",
-    "onCommand:bddScenarioRunner.rerunFailed"
+    "onCommand:bddScenarioRunner.rerunFailed",
+    "onCommand:bddScenarioRunner.diagnoseEnvironment"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -37,6 +38,10 @@
       {
         "command": "bddScenarioRunner.rerunFailed",
         "title": "BDD Runner: Re-run Failed"
+      },
+      {
+        "command": "bddScenarioRunner.diagnoseEnvironment",
+        "title": "BDD Runner: Diagnose Environment"
       }
     ],
     "menus": {
@@ -67,6 +72,9 @@
         },
         {
           "command": "bddScenarioRunner.rerunFailed"
+        },
+        {
+          "command": "bddScenarioRunner.diagnoseEnvironment"
         }
       ]
     },
@@ -121,6 +129,29 @@
           ],
           "default": "headless",
           "description": "Default run mode when askRunMode is disabled."
+        },
+        "bddScenarioRunner.forceShell": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "git-bash",
+            "pwsh",
+            "powershell",
+            "cmd",
+            "bash"
+          ],
+          "default": "auto",
+          "description": "Force execution shell. auto = resolve based on OS/profile with safe fallbacks."
+        },
+        "bddScenarioRunner.gitBashPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to Git Bash executable (Windows), for example C:/Program Files/Git/bin/bash.exe."
+        },
+        "bddScenarioRunner.pwshPath": {
+          "type": "string",
+          "default": "pwsh",
+          "description": "pwsh executable path or command name when forceShell is pwsh."
         }
       }
     }
