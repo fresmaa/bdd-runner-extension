@@ -3,7 +3,7 @@
   "displayName": "BDD Scenario Runner",
   "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
   "version": "0.1.34",
-  "publisher": "fresma-labs-space",
+  "publisher": "fresma-labs",
   "license": "MIT",
   "private": true,
   "engines": {
