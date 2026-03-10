@@ -1,137 +1,73 @@
 # BDD Scenario Runner
 
-`BDD Scenario Runner` is a Visual Studio Code extension that executes Playwright BDD tests directly from Gherkin `.feature` files.
+Run Playwright BDD scenarios directly from `.feature` files in VS Code.
 
-It is designed for fast local feedback, minimal context switching, and consistent execution across different terminal shells.
+This extension helps you run tests faster without leaving your feature file.
 
-## Overview
+## Who Is This For
 
-- Execute the current scenario from the editor or command palette.
-- Execute all scenarios in the current feature file.
-- Re-run failed tests in one action.
-- Run individual `Scenario Outline` example rows from the Testing view.
-- Keep command quoting safe across PowerShell, CMD, and Bash.
+- QA engineers and test automation users working with Gherkin `.feature` files.
+- Teams using Playwright BDD in their project.
 
-## Capability Matrix
+## What You Can Do
 
-| Capability | Description |
+- Run the scenario where your cursor is.
+- Run all scenarios in the current feature file.
+- Re-run only failed tests.
+- Run specific `Scenario Outline` example rows from the Testing panel.
+- Choose `headless` or `headed` mode on each run.
+
+## Before You Start
+
+Make sure your project already has:
+
+- Playwright test setup.
+- BDD workflow/commands used by your team (for example `bddgen`).
+- Node dependencies installed.
+
+## Quick Start
+
+1. Open a project that already has Playwright + BDD setup.
+2. Open any `.feature` file.
+3. Put your cursor inside a `Scenario`.
+4. Run command: `BDD Runner: Run Current Scenario`.
+5. Check output in terminal: `BDD Scenario Runner`.
+
+## Commands
+
+| Command | When to use |
 | --- | --- |
-| Current scenario run | Detects scenario from cursor position and runs it immediately |
-| Current feature run | Runs all scenarios in the active `.feature` file |
-| Re-run failed | Uses Playwright's last failed filter |
-| Scenario Outline support | Generates run items per `Examples` row |
-| Run mode selection | Supports `headless` and `headed` execution |
-| Configurable templates | Supports placeholder-based command customization |
+| `BDD Runner: Run Current Scenario` | Run scenario at current cursor |
+| `BDD Runner: Run Current Feature` | Run all scenarios in open feature file |
+| `BDD Runner: Re-run Failed` | Re-run failed tests from previous run |
+| `BDD Runner: Diagnose Environment` | Check shell/runtime configuration |
 
-## Available Commands
+## Recommended Settings
 
-| Command | Purpose |
-| --- | --- |
-| `BDD Runner: Run Current Scenario` | Run scenario at the active cursor context |
-| `BDD Runner: Run Current Feature` | Run all scenarios in current feature file |
-| `BDD Runner: Re-run Failed` | Re-run failed test cases from previous run |
-| `BDD Runner: Diagnose Environment` | Validate shell/tool runtime and print diagnostics |
+Search `bddScenarioRunner` in VS Code Settings.
 
-## Default Command Templates
+| Setting | Default | Why it matters |
+| --- | --- | --- |
+| `bddScenarioRunner.askRunMode` | `true` | Lets you choose `headless`/`headed` each run |
+| `bddScenarioRunner.defaultRunMode` | `headless` | Used when run mode prompt is disabled |
+| `bddScenarioRunner.showTerminalOnRun` | `false` | Set `true` if you always want to see logs immediately |
+| `bddScenarioRunner.autoClearTerminal` | `true` | Keeps output clean for each run |
+| `bddScenarioRunner.forceShell` | `auto` | Use only if shell detection does not match your environment |
 
-```bash
-# Scenario
-pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}
+## Troubleshooting
 
-# Feature
-pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}
+1. Command does not run anything:
+Make sure active file extension is `.feature`.
 
-# Example row (Scenario Outline)
-pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}
+2. Wrong shell behavior on Windows:
+Set `bddScenarioRunner.forceShell` to `pwsh` or `powershell` explicitly.
 
-# Re-run failed
-pnpm bddgen && pnpm playwright test --last-failed{headedFlag}
-```
+3. `pnpm`, `playwright`, or `bddgen` not found:
+Install project dependencies first, then run `BDD Runner: Diagnose Environment`.
 
-## Usage
+## Compatibility
 
-1. Open a `.feature` file.
-2. Place the cursor inside a `Scenario` or `Scenario Outline`.
-3. Trigger execution from editor title, command palette, or Testing panel.
-4. Select run mode (`Headless` or `Headed`) when prompted.
-5. Review output in the `BDD Scenario Runner` terminal and Testing results.
+- Works with Playwright + Gherkin BDD projects.
+- Supports PowerShell 5, PowerShell 7, CMD, and Bash-based flows.
+- Handles command-quoting differences across shells.
 
-## Configuration Reference
-
-Search for `bddScenarioRunner` in VS Code Settings.
-
-| Setting | Type | Default | Description |
-| --- | --- | --- | --- |
-| `bddScenarioRunner.commandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}` | Template for current scenario runs |
-| `bddScenarioRunner.featureCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}` | Template for feature-level runs |
-| `bddScenarioRunner.exampleCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}` | Template for `Scenario Outline` example-row runs |
-| `bddScenarioRunner.rerunFailedCommandTemplate` | `string` | `pnpm bddgen && pnpm playwright test --last-failed{headedFlag}` | Template for failed-test reruns |
-| `bddScenarioRunner.terminalName` | `string` | `BDD Scenario Runner` | Terminal name used by the extension |
-| `bddScenarioRunner.autoClearTerminal` | `boolean` | `true` | Clears terminal before each execution |
-| `bddScenarioRunner.showTerminalOnRun` | `boolean` | `false` | Reveals terminal automatically on run |
-| `bddScenarioRunner.askRunMode` | `boolean` | `true` | Prompts mode selection for each run |
-| `bddScenarioRunner.defaultRunMode` | `headless \| headed` | `headless` | Fallback mode when prompt is disabled |
-| `bddScenarioRunner.forceShell` | `auto \| git-bash \| pwsh \| powershell \| cmd \| bash` | `auto` | Force shell runtime with fallback logic |
-| `bddScenarioRunner.gitBashPath` | `string` | `` | Optional absolute path to `bash.exe` on Windows |
-| `bddScenarioRunner.pwshPath` | `string` | `pwsh` | Command/path used when `forceShell = pwsh` |
-
-## Placeholder Reference
-
-- `{scenario}` / `{scenarioQuoted}`
-- `{featureName}` / `{featureNameQuoted}`
-- `{example}` / `{exampleQuoted}`
-- `{scenarioExampleRegex}` / `{scenarioExampleRegexQuoted}`
-- `{featurePath}` / `{featurePathQuoted}`
-- `{runMode}`
-- `{headedFlag}`
-
-## Build and Package
-
-```bash
-cd /path/to/bdd-runner-extension
-npm install
-npm run compile
-npm run package
-```
-
-Packaging generates a `.vsix` artifact in the project root.
-
-## Publish to Visual Studio Marketplace
-
-1. Create a publisher in Marketplace Management if not already available: `fresma-labs-space`.
-2. Create a Personal Access Token (PAT) with `Marketplace > Manage` scope.
-3. Set PAT in terminal session.
-
-```powershell
-$env:VSCE_PAT = "<your-pat>"
-```
-
-4. Publish from project root.
-
-```bash
-# Publish current version from package.json
-npm run publish
-
-# Auto-bump + publish
-npm run publish:patch
-npm run publish:minor
-npm run publish:major
-```
-
-If the extension was never published before, make sure `publisher` in `package.json` matches your Marketplace publisher ID exactly.
-
-## Install from VSIX
-
-1. Open `Extensions` in VS Code.
-2. Select `...` (More Actions).
-3. Click `Install from VSIX...`.
-4. Choose the generated `.vsix` file.
-
-## Compatibility Notes
-
-- Intended for Playwright + Gherkin BDD projects.
-- PowerShell 5 and PowerShell 7 are both supported.
-- On PowerShell 5 profiles, `&&` command chains are converted to fail-fast PowerShell-compatible chaining.
-- On PowerShell 7 (`pwsh`), commands run natively without `&&` rewriting.
-- With `forceShell = auto`, the extension resolves shell per OS and falls back safely when a runtime is missing.
-- If you force `git-bash` on Windows without Git Bash installed, it falls back to PowerShell and shows a warning.
