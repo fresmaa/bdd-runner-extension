@@ -1,0 +1,88 @@
+# BDD Scenario Runner User Guide
+
+This guide is for daily users of BDD Scenario Runner.
+
+## 1. Prerequisites
+
+Before running commands from VS Code:
+
+- Project already uses Playwright and BDD flow.
+- Dependencies are installed.
+- Feature files use .feature extension.
+
+## 2. First Run
+
+1. Open your project folder in VS Code.
+2. Open any .feature file.
+3. Put cursor inside a Scenario block.
+4. Open Command Palette.
+5. Run BDD Runner: Run Current Scenario.
+6. Choose run mode (headless or headed) if prompted.
+7. Watch terminal output in BDD Scenario Runner terminal.
+
+## 3. Command Reference
+
+| Command | What it does | Typical use |
+| --- | --- | --- |
+| BDD Runner: Run Current Scenario | Runs scenario at cursor | Fast scenario-level check |
+| BDD Runner: Run Current Feature | Runs all scenarios in active file | Validate full feature |
+| BDD Runner: Re-run Failed | Runs last failed set | Verify bug fix quickly |
+| BDD Runner: Diagnose Environment | Checks shell/runtime setup | Debug execution issues |
+
+## 4. Testing Panel Usage
+
+- Scenario nodes can be run directly from Testing view.
+- For Scenario Outline, example rows can be run individually.
+- This is useful for isolating specific data rows.
+
+## 5. Settings You May Want to Change
+
+| Setting | When to change |
+| --- | --- |
+| bddScenarioRunner.askRunMode | Disable if you always use one mode |
+| bddScenarioRunner.defaultRunMode | Set preferred default when prompt is off |
+| bddScenarioRunner.showTerminalOnRun | Enable if you want terminal to auto-open |
+| bddScenarioRunner.autoClearTerminal | Disable if you want to keep previous logs |
+| bddScenarioRunner.forceShell | Use only when auto shell detection is not suitable |
+
+## 6. Windows Shell Tips
+
+If your environment behaves differently than expected:
+
+- Try bddScenarioRunner.forceShell = pwsh
+- Or bddScenarioRunner.forceShell = powershell
+- Use Diagnose Environment to confirm effective shell and available commands
+
+## 7. Common Issues
+
+1. Command seems to do nothing
+- Ensure the active file is .feature.
+
+2. Tooling not found (pnpm, bddgen, playwright)
+- Install dependencies in project, then rerun Diagnose Environment.
+
+3. Wrong command behavior due to shell differences
+- Force shell via setting and retry.
+
+## 8. Quick Validation Checklist
+
+- Run Current Scenario works
+- Run Current Feature works
+- Re-run Failed works
+- Testing panel scenario run works
+- Diagnose Environment returns expected results
+
+## 9. Platform Notes
+
+- Windows: PowerShell, pwsh, CMD, Git Bash supported with fallback logic.
+- Linux/macOS: POSIX shell path with optional bash or pwsh depending on environment.
+
+## 10. Support Workflow
+
+When reporting issues, include:
+
+- Operating system
+- Shell profile
+- Exact command used
+- Output snippet from terminal
+- Diagnose Environment output summary

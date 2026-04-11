@@ -20,6 +20,7 @@
     "onLanguage:feature"
   ],
   "main": "./out/extension.js",
+  "icon": "docs/images/extension-icon.png",
   "contributes": {
     "commands": [
       {
