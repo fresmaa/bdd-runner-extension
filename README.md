@@ -1,5 +1,22 @@
 # BDD Scenario Runner
 
+![BDD Scenario Runner Banner](docs/images/hero.png)
+
+| Item | Value |
+| --- | --- |
+| VS Code Engine | `^1.90.0` |
+| Category | Testing |
+| Language | TypeScript |
+| Platforms | Windows, Linux, macOS |
+| Test Runner | Node test runner |
+
+<p align="center">
+	<a href="#quick-start">Quick Start</a> •
+	<a href="#commands">Commands</a> •
+	<a href="#recommended-settings">Settings</a> •
+	<a href="#cross-platform-validation-matrix">Cross-Platform</a>
+</p>
+
 Run Playwright BDD scenarios directly from `.feature` files in VS Code.
 
 This extension helps you run tests faster without leaving your feature file.
@@ -11,11 +28,11 @@ This extension helps you run tests faster without leaving your feature file.
 
 ## What You Can Do
 
-- Run the scenario where your cursor is.
-- Run all scenarios in the current feature file.
-- Re-run only failed tests.
-- Run specific `Scenario Outline` example rows from the Testing panel.
-- Choose `headless` or `headed` mode on each run.
+- <img alt="run" src="docs/images/icon-run.png" width="16" /> Run the scenario where your cursor is.
+- <img alt="feature" src="docs/images/icon-feature.png" width="16" /> Run all scenarios in the current feature file.
+- <img alt="rerun" src="docs/images/icon-rerun.png" width="16" /> Re-run only failed tests.
+- <img alt="outline" src="docs/images/icon-feature.png" width="16" /> Run specific `Scenario Outline` example rows from the Testing panel.
+- <img alt="mode" src="docs/images/icon-diag.png" width="16" /> Choose `headless` or `headed` mode on each run.
 
 ## Before You Start
 
@@ -37,10 +54,10 @@ Make sure your project already has:
 
 | Command | When to use |
 | --- | --- |
-| `BDD Runner: Run Current Scenario` | Run scenario at current cursor |
-| `BDD Runner: Run Current Feature` | Run all scenarios in open feature file |
-| `BDD Runner: Re-run Failed` | Re-run failed tests from previous run |
-| `BDD Runner: Diagnose Environment` | Check shell/runtime configuration |
+| <img alt="run" src="docs/images/icon-run.png" width="16" /> `BDD Runner: Run Current Scenario` | Run scenario at current cursor |
+| <img alt="feature" src="docs/images/icon-feature.png" width="16" /> `BDD Runner: Run Current Feature` | Run all scenarios in open feature file |
+| <img alt="rerun" src="docs/images/icon-rerun.png" width="16" /> `BDD Runner: Re-run Failed` | Re-run failed tests from previous run |
+| <img alt="diag" src="docs/images/icon-diag.png" width="16" /> `BDD Runner: Diagnose Environment` | Check shell/runtime configuration |
 
 ## Recommended Settings
 
@@ -74,6 +91,8 @@ Install project dependencies first, then run `BDD Runner: Diagnose Environment`.
 ## Architecture Overview
 
 The extension is organized into focused modules so behavior is easier to maintain and test.
+
+![Runtime Flow](docs/images/workflow.png)
 
 ### Module Map
 
@@ -116,4 +135,40 @@ Run tests with:
 ```bash
 npm test
 ```
+
+## Cross-Platform Validation Matrix
+
+Use this matrix to confirm the extension can run in Windows, Linux, and macOS.
+
+| Area | Windows | Linux | macOS | Pass Criteria |
+| --- | --- | --- | --- | --- |
+| VS Code Engine | 1.90+ | 1.90+ | 1.90+ | Extension activates on opening a `.feature` file |
+| Node Runtime | Available in desktop/remote extension host | Available in desktop/remote extension host | Available in desktop/remote extension host | Commands can spawn child process successfully |
+| Default Shell Auto Mode | PowerShell/CMD/Git Bash fallback | POSIX shell | POSIX shell | `Diagnose Environment` shows effective shell and runs checks |
+| Force Shell Option | `pwsh`, `powershell`, `cmd`, `git-bash`, `bash` | `pwsh`, `bash` | `pwsh`, `bash` | Forced shell works or safe fallback warning appears |
+| Command Run: Current Scenario | Supported | Supported | Supported | Scenario at cursor executes and terminal shows command output |
+| Command Run: Current Feature | Supported | Supported | Supported | All scenarios in active feature run |
+| Command: Re-run Failed | Supported | Supported | Supported | Last failed test set can be rerun |
+| Testing Panel: Scenario | Supported | Supported | Supported | Scenario node executes from Testing view |
+| Testing Panel: Scenario Outline Example | Supported | Supported | Supported | Example row node executes with regex targeting |
+| Packaging VSIX | Supported | Supported | Supported | `npm run package` completes successfully |
+
+### Per-Platform Checklist
+
+1. Open a workspace that already has Playwright + BDD setup.
+2. Open a `.feature` file to trigger extension activation.
+3. Run `BDD Runner: Diagnose Environment` and verify all checks are OK.
+4. Run `BDD Runner: Run Current Scenario` in `headless` mode.
+5. Run `BDD Runner: Run Current Feature` in `headed` mode.
+6. Open Testing panel and run one Scenario node.
+7. If there is a Scenario Outline, run one Example row node.
+8. Run `BDD Runner: Re-run Failed` after creating at least one failure case.
+
+### Suggested Evidence to Record
+
+- OS and shell profile used
+- Effective shell shown by diagnose output
+- Command output snippet for scenario and feature runs
+- Testing panel pass or fail result for scenario and example row
+- Any fallback warning shown by shell resolution
 

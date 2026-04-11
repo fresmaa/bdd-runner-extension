@@ -5,6 +5,10 @@
   "version": "0.1.35",
   "publisher": "fresma-labs",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fresmaa/bdd-runner-extension.git"
+  },
   "private": true,
   "engines": {
     "vscode": "^1.90.0"

@@ -8,3 +8,4 @@ package-lock.json
 out/test/**
 *.vsix
 .env
+docs/images/*.svg
