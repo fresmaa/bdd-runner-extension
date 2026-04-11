@@ -73,7 +73,13 @@ Install dependencies, then run BDD Runner: Diagnose Environment.
 
 Need detailed walkthrough, examples, and cross-platform checklist?
 
-- See docs/USER-GUIDE.md
+- See [docs/USER-GUIDE.md](docs/USER-GUIDE.md)
+
+## Changelog
+
+See full release history in [CHANGELOG.md](CHANGELOG.md).
+
+Latest highlights are available in the [0.1.37 entry](CHANGELOG.md#L12).
 
 ## For Maintainers
 
