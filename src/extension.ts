@@ -10,11 +10,14 @@ import { getAllScenarioContexts, getFeatureContext, getScenarioContext } from ".
 import {
   detectShellDialect,
   executeCommandWithOutput,
+  getRunningProcessCount,
   getConfiguredForceShell,
   normalizeCommandForDialect,
+  onRunningProcessCountChanged,
   resolveGitBashPath,
   resolvePwshPath,
   resolveTerminalShell,
+  stopRunningProcesses,
   stripAnsi,
 } from "./shell";
 import { FeatureContext, RunCommandInput, RunMode, ScenarioContext, ScenarioLocation } from "./types";
@@ -24,8 +27,34 @@ const TEST_DATA = new WeakMap<vscode.TestItem, ScenarioLocation>();
 const SHOWN_TERMINAL_WARNINGS = new Set<string>();
 
 let testController: vscode.TestController;
+let stopAllTestItemsRequested = false;
+let activeTestRunCount = 0;
 
 export function activate(context: vscode.ExtensionContext): void {
+  const stopStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1100);
+  stopStatusBar.text = "$(stop-circle) Stop BDD Run";
+  stopStatusBar.command = "bddScenarioRunner.stopRunning";
+  stopStatusBar.tooltip = "Stop currently running BDD scenario process";
+
+  const hasActiveFeatureEditor = (): boolean => {
+    const editor = vscode.window.activeTextEditor;
+    return !!editor && isFeatureDocument(editor.document);
+  };
+
+  const syncStopStatusBar = (runningCount: number): void => {
+    if (runningCount > 0 || hasActiveFeatureEditor()) {
+      stopStatusBar.show();
+    } else {
+      stopStatusBar.hide();
+    }
+  };
+
+  syncStopStatusBar(getRunningProcessCount());
+  const runningProcessDisposable = onRunningProcessCountChanged((count) => syncStopStatusBar(count));
+  const activeEditorDisposable = vscode.window.onDidChangeActiveTextEditor(() => {
+    syncStopStatusBar(getRunningProcessCount());
+  });
+
   const runScenarioTag = vscode.commands.registerCommand(
     "bddScenarioRunner.runScenarioTag",
     async (input?: RunCommandInput) => {
@@ -86,6 +115,13 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   );
 
+  const stopRunning = vscode.commands.registerCommand(
+    "bddScenarioRunner.stopRunning",
+    async () => {
+      await stopRunningScenario();
+    },
+  );
+
   const runCurrentFeature = vscode.commands.registerCommand(
     "bddScenarioRunner.runCurrentFeature",
     async () => {
@@ -115,13 +151,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const runHeadlessProfile = testController.createRunProfile(
     "Run Headless",
     vscode.TestRunProfileKind.Run,
-    (request) => runFromTestItems(request, "headless"),
+    (request, token) => runFromTestItems(request, "headless", token),
     true,
   );
   const runHeadedProfile = testController.createRunProfile(
     "Run Headed",
     vscode.TestRunProfileKind.Run,
-    (request) => runFromTestItems(request, "headed"),
+    (request, token) => runFromTestItems(request, "headed", token),
     false,
   );
 
@@ -150,6 +186,10 @@ export function activate(context: vscode.ExtensionContext): void {
     runCurrentFeature,
     rerunFailed,
     diagnoseEnvironment,
+    stopRunning,
+    stopStatusBar,
+    runningProcessDisposable,
+    activeEditorDisposable,
     openDocDisposable,
     changeDocDisposable,
     closeDocDisposable,
@@ -224,6 +264,42 @@ function runCommandInTerminal(command: string, cwd: vscode.Uri | undefined): voi
   }
 
   terminal.sendText(normalizedCommand, true);
+}
+
+async function stopRunningScenario(): Promise<void> {
+  const hadActiveTestRun = activeTestRunCount > 0;
+  if (hadActiveTestRun) {
+    stopAllTestItemsRequested = true;
+  }
+
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  const terminalName = config.get<string>("terminalName", "BDD Scenario Runner");
+  const terminal = vscode.window.terminals.find((item) => item.name === terminalName);
+
+  if (terminal) {
+    terminal.show(true);
+    await vscode.commands.executeCommand("workbench.action.terminal.sendSequence", { text: "\u0003" });
+  }
+
+  const stoppedProcessCount = stopRunningProcesses();
+
+  if (hadActiveTestRun || terminal || stoppedProcessCount > 0) {
+    const segments: string[] = [];
+    if (hadActiveTestRun) {
+      segments.push("active test batch will stop after current scenario");
+    }
+    if (terminal) {
+      segments.push("terminal interrupted");
+    }
+    if (stoppedProcessCount > 0) {
+      segments.push(`killed ${stoppedProcessCount} background process(es)`);
+    }
+    const details = segments.length > 0 ? ` (${segments.join(", ")})` : "";
+    vscode.window.showInformationMessage(`Stop signal sent${details}.`);
+    return;
+  }
+
+  vscode.window.showWarningMessage("No running BDD scenario process was detected.");
 }
 
 function getOrCreateTerminal(name: string, cwd: vscode.Uri | undefined): vscode.Terminal {
@@ -380,11 +456,36 @@ async function resolveRunMode(config: vscode.WorkspaceConfiguration): Promise<Ru
   return picked?.value ?? null;
 }
 
-async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode): Promise<void> {
+async function runFromTestItems(
+  request: vscode.TestRunRequest,
+  runMode: RunMode,
+  token: vscode.CancellationToken,
+): Promise<void> {
+  if (activeTestRunCount === 0) {
+    stopAllTestItemsRequested = false;
+  }
+  activeTestRunCount += 1;
+
   const run = testController.createTestRun(request);
   const testItems = collectTestItems(request);
+  let stopNoticeWritten = false;
+  const cancellationDisposable = token.onCancellationRequested(() => {
+    const stoppedCount = stopRunningProcesses();
+    run.appendOutput(
+      `\r\n[INFO] Run cancellation requested${stoppedCount > 0 ? `, stopping ${stoppedCount} process(es)` : ""}.\r\n`,
+    );
+  });
 
   for (const item of testItems) {
+    if (token.isCancellationRequested || stopAllTestItemsRequested) {
+      if (stopAllTestItemsRequested && !stopNoticeWritten) {
+        run.appendOutput("\r\n[INFO] Stopped by user. Remaining scenarios in this feature run were cancelled.\r\n");
+        stopNoticeWritten = true;
+      }
+      run.skipped(item);
+      continue;
+    }
+
     const scenarioRef = TEST_DATA.get(item);
     if (!scenarioRef) {
       run.skipped(item);
@@ -410,18 +511,48 @@ async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode
       run.appendOutput(`$ ${command}\r\n`, undefined, item);
 
       const capturedLines: string[] = [];
-      const result = await executeCommandWithOutput(command, cwd, (line) => {
+      let activeCommand = command;
+      let result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
         outputBuffer += `${line}\r\n`;
         capturedLines.push(stripAnsi(line));
         run.appendOutput(`${line}\r\n`, undefined, item);
       });
+
+      if (!result.success && shouldRetryWithFlexibleGrep(capturedLines)) {
+        const retryCommand = replaceGrepPattern(activeCommand, buildFlexibleScenarioPattern(ctx.scenarioName));
+        if (retryCommand && retryCommand !== activeCommand) {
+          run.appendOutput(
+            "\r\n[INFO] No tests found with exact grep. Retrying with flexible scenario pattern...\r\n",
+            undefined,
+            item,
+          );
+          activeCommand = retryCommand;
+          run.appendOutput(`$ ${activeCommand}\r\n`, undefined, item);
+          outputBuffer += `$ ${activeCommand}\r\n`;
+
+          result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
+            outputBuffer += `${line}\r\n`;
+            capturedLines.push(stripAnsi(line));
+            run.appendOutput(`${line}\r\n`, undefined, item);
+          });
+        }
+      }
+
+      if (stopAllTestItemsRequested) {
+        if (!stopNoticeWritten) {
+          run.appendOutput("\r\n[INFO] Stopped by user. Remaining scenarios in this feature run were cancelled.\r\n");
+          stopNoticeWritten = true;
+        }
+        run.skipped(item);
+        continue;
+      }
 
       if (outputBuffer.trim().length > 0) {
         run.appendOutput(`${outputBuffer}\r\n`, undefined, item);
       }
 
       if (result.success) {
-        const successDetails = buildSuccessDetails(command, capturedLines);
+        const successDetails = buildSuccessDetails(activeCommand, capturedLines);
         run.appendOutput(`\r\n[SUCCESS] Scenario passed\r\n${successDetails}\r\n`, undefined, item);
         run.passed(item);
       } else {
@@ -430,7 +561,7 @@ async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode
           (result.exitCode !== null
             ? `Process exited with code ${result.exitCode}.`
             : "Scenario execution failed.");
-        const details = buildFailureDetails(command, capturedLines);
+        const details = buildFailureDetails(activeCommand, capturedLines);
         run.appendOutput(`\r\n[ERROR] ${reason}\r\n`, undefined, item);
         run.failed(item, new vscode.TestMessage(`Scenario execution failed: ${reason}\n\n${details}`));
       }
@@ -439,7 +570,13 @@ async function runFromTestItems(request: vscode.TestRunRequest, runMode: RunMode
     }
   }
 
+  cancellationDisposable.dispose();
   run.end();
+
+  activeTestRunCount = Math.max(0, activeTestRunCount - 1);
+  if (activeTestRunCount === 0) {
+    stopAllTestItemsRequested = false;
+  }
 }
 
 function buildFailureDetails(command: string, lines: string[]): string {
@@ -460,6 +597,41 @@ function buildSuccessDetails(command: string, lines: string[]): string {
 
   const tail = cleaned.slice(-30).join("\n");
   return `Command: ${command}\n\nOutput tail:\n${tail}`;
+}
+
+function shouldRetryWithFlexibleGrep(lines: string[]): boolean {
+  return lines.some((line) => /No tests found\./i.test(line));
+}
+
+function buildFlexibleScenarioPattern(scenarioName: string): string {
+  const words = scenarioName
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .map((word) => escapeRegexLiteral(word));
+
+  return words.length > 0 ? words.join(".*") : escapeRegexLiteral(scenarioName);
+}
+
+function replaceGrepPattern(command: string, newPattern: string): string | null {
+  const grepWithQuote = /--grep(\s+|=)(["'])(.*?)\2/;
+  if (grepWithQuote.test(command)) {
+    return command.replace(grepWithQuote, (_m, sep: string, quote: string) => {
+      const escaped = quote === '"' ? newPattern.replace(/"/g, '\\"') : newPattern.replace(/'/g, "\\'");
+      return `--grep${sep}${quote}${escaped}${quote}`;
+    });
+  }
+
+  const grepNoQuote = /--grep(\s+|=)(\S+)/;
+  if (grepNoQuote.test(command)) {
+    return command.replace(grepNoQuote, (_m, sep: string) => `--grep${sep}"${newPattern}"`);
+  }
+
+  return null;
+}
+
+function escapeRegexLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function runEnvironmentDiagnosis(): Promise<void> {

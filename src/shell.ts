@@ -1,9 +1,13 @@
 import * as fs from "fs";
-import { spawn, spawnSync } from "child_process";
+import { spawn, spawnSync, type ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import { ForceShell, ShellDialect } from "./types";
 
 const SHOWN_SHELL_WARNINGS = new Set<string>();
+const ACTIVE_PROCESSES = new Set<ChildProcess>();
+const RUNNING_PROCESS_COUNT_EMITTER = new vscode.EventEmitter<number>();
+
+export const onRunningProcessCountChanged = RUNNING_PROCESS_COUNT_EMITTER.event;
 
 export function executeCommandWithOutput(
   command: string,
@@ -13,12 +17,24 @@ export function executeCommandWithOutput(
   return new Promise((resolve) => {
     const dialect = detectShellDialect();
     const normalizedCommand = normalizeCommandForDialect(command, dialect);
-    const { shell, args } = getShellExecution(normalizedCommand, dialect);
-    const proc = spawn(shell, args, {
-      cwd,
-      env: process.env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const proc =
+      process.platform === "win32" && dialect === "cmd"
+        ? spawn(normalizedCommand, {
+            cwd,
+            env: process.env,
+            stdio: ["ignore", "pipe", "pipe"],
+            shell: "cmd.exe",
+          })
+        : (() => {
+            const { shell, args } = getShellExecution(normalizedCommand, dialect);
+            return spawn(shell, args, {
+              cwd,
+              env: process.env,
+              stdio: ["ignore", "pipe", "pipe"],
+            });
+          })();
+    ACTIVE_PROCESSES.add(proc);
+            RUNNING_PROCESS_COUNT_EMITTER.fire(ACTIVE_PROCESSES.size);
 
     const emitChunk = (chunk: Buffer): void => {
       const text = chunk.toString();
@@ -32,12 +48,16 @@ export function executeCommandWithOutput(
     proc.stdout.on("data", (chunk: Buffer) => emitChunk(chunk));
     proc.stderr.on("data", (chunk: Buffer) => emitChunk(chunk));
     proc.on("close", (code) => {
+      ACTIVE_PROCESSES.delete(proc);
+      RUNNING_PROCESS_COUNT_EMITTER.fire(ACTIVE_PROCESSES.size);
       resolve({
         success: code === 0,
         exitCode: code,
       });
     });
     proc.on("error", (error) => {
+      ACTIVE_PROCESSES.delete(proc);
+      RUNNING_PROCESS_COUNT_EMITTER.fire(ACTIVE_PROCESSES.size);
       resolve({
         success: false,
         exitCode: null,
@@ -45,6 +65,42 @@ export function executeCommandWithOutput(
       });
     });
   });
+}
+
+export function stopRunningProcesses(): number {
+  let stopped = 0;
+  for (const proc of ACTIVE_PROCESSES) {
+    if (terminateProcessTree(proc)) {
+      stopped += 1;
+    }
+  }
+  ACTIVE_PROCESSES.clear();
+  RUNNING_PROCESS_COUNT_EMITTER.fire(ACTIVE_PROCESSES.size);
+  return stopped;
+}
+
+function terminateProcessTree(proc: ChildProcess): boolean {
+  try {
+    if (proc.killed) {
+      return false;
+    }
+
+    if (process.platform === "win32" && proc.pid) {
+      // Kill full process tree so child pnpm/playwright processes do not keep running.
+      const result = spawnSync("taskkill", ["/PID", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+      return !result.error;
+    }
+
+    proc.kill("SIGTERM");
+    return true;
+  } catch {
+    // Best-effort stop for child processes started by scenario runs.
+    return false;
+  }
+}
+
+export function getRunningProcessCount(): number {
+  return ACTIVE_PROCESSES.size;
 }
 
 export function detectShellDialect(): ShellDialect {
@@ -89,6 +145,10 @@ export function normalizeCommandForDialect(command: string, dialect: ShellDialec
   // Only Windows PowerShell 5.1 needs && emulation.
   if (dialect === "powershell" && shouldUseLegacyWindowsPowerShell()) {
     return normalizePowerShellChain(command);
+  }
+
+  if (dialect === "cmd") {
+    return normalizeCmdGrepQuotes(command);
   }
 
   return command;
@@ -321,6 +381,17 @@ function normalizePowerShellChain(command: string): string {
 
   const joined = parts.join("; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; ");
   return `${joined}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`;
+}
+
+function normalizeCmdGrepQuotes(command: string): string {
+  // In cmd, single quotes are treated as literal characters and can break --grep matching.
+  let normalized = command;
+  normalized = normalized.replace(/--grep\s+'([^']*)'/g, '--grep "$1"');
+  normalized = normalized.replace(/--grep='([^']*)'/g, '--grep="$1"');
+  // Some execution paths can leave a dangling single-quote after a double-quoted grep value.
+  normalized = normalized.replace(/--grep\s+"([^"]*)"'/g, '--grep "$1"');
+  normalized = normalized.replace(/--grep="([^"]*)"'/g, '--grep="$1"');
+  return normalized;
 }
 
 function resolvePowerShellExecutableForAuto(): string {

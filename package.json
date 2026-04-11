@@ -2,7 +2,7 @@
   "name": "bdd-scenario-runner-extension",
   "displayName": "BDD Scenario Runner",
   "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
-  "version": "0.1.36",
+  "version": "0.1.35",
   "publisher": "fresma-labs",
   "license": "MIT",
   "repository": {
@@ -25,23 +25,43 @@
     "commands": [
       {
         "command": "bddScenarioRunner.runScenarioTag",
-        "title": "BDD Runner: Run Current Scenario"
+        "title": "Run Scenario",
+        "icon": {
+          "light": "docs/images/icon-run.png",
+          "dark": "docs/images/icon-run.png"
+        }
       },
       {
         "command": "bddScenarioRunner.runScenarioTagAtLine",
-        "title": "BDD Runner: Run Scenario at Line"
+        "title": "Run Scenario at Line"
       },
       {
         "command": "bddScenarioRunner.runCurrentFeature",
-        "title": "BDD Runner: Run Current Feature"
+        "title": "Run Feature",
+        "icon": {
+          "light": "docs/images/icon-feature.png",
+          "dark": "docs/images/icon-feature.png"
+        }
       },
       {
         "command": "bddScenarioRunner.rerunFailed",
-        "title": "BDD Runner: Re-run Failed"
+        "title": "Re-run Failed",
+        "icon": {
+          "light": "docs/images/icon-rerun.png",
+          "dark": "docs/images/icon-rerun.png"
+        }
       },
       {
         "command": "bddScenarioRunner.diagnoseEnvironment",
-        "title": "BDD Runner: Diagnose Environment"
+        "title": "Diagnose Environment"
+      },
+      {
+        "command": "bddScenarioRunner.stopRunning",
+        "title": "Stop",
+        "icon": {
+          "light": "docs/images/icon-stop-light.png",
+          "dark": "docs/images/icon-stop-dark.png"
+        }
       }
     ],
     "menus": {
@@ -59,6 +79,11 @@
         {
           "command": "bddScenarioRunner.rerunFailed",
           "group": "navigation@22"
+        },
+        {
+          "command": "bddScenarioRunner.stopRunning",
+          "when": "resourceExtname == .feature",
+          "group": "navigation@19"
         }
       ],
       "commandPalette": [
@@ -75,6 +100,9 @@
         },
         {
           "command": "bddScenarioRunner.diagnoseEnvironment"
+        },
+        {
+          "command": "bddScenarioRunner.stopRunning"
         }
       ]
     },

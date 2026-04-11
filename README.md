@@ -29,6 +29,7 @@ BDD Scenario Runner helps QA and automation engineers run tests faster without l
 | BDD Runner: Run Current Scenario | Run scenario at current cursor |
 | BDD Runner: Run Current Feature | Run all scenarios in the active feature file |
 | BDD Runner: Re-run Failed | Run failed tests from previous run |
+| BDD Runner: Stop Running | Stop scenario process that is currently running |
 | BDD Runner: Diagnose Environment | Check shell and runtime readiness |
 
 ## Recommended Settings

@@ -27,6 +27,7 @@ Before running commands from VS Code:
 | BDD Runner: Run Current Scenario | Runs scenario at cursor | Fast scenario-level check |
 | BDD Runner: Run Current Feature | Runs all scenarios in active file | Validate full feature |
 | BDD Runner: Re-run Failed | Runs last failed set | Verify bug fix quickly |
+| BDD Runner: Stop Running | Sends stop signal to active run | Stop long-running or stuck scenario |
 | BDD Runner: Diagnose Environment | Checks shell/runtime setup | Debug execution issues |
 
 ## 4. Testing Panel Usage
