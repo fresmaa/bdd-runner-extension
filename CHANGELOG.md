@@ -6,8 +6,7 @@ This format is inspired by Keep a Changelog and follows semantic versioning.
 
 ## [Unreleased]
 
-### Added
-- Placeholder for upcoming changes.
+## [1.0.0] - 2026-04-12
 
 ### Changed
 - Rebranded user-facing extension name to Playwright BDD Runner across marketplace metadata, commands category labels, docs, terminal defaults, and runtime messages.
@@ -31,6 +30,7 @@ This format is inspired by Keep a Changelog and follows semantic versioning.
 ### Added
 - Published previous patch release with refactor, docs, and run-command reliability improvements.
 
-[Unreleased]: https://github.com/fresmaa/bdd-runner-extension/compare/v0.1.37...HEAD
+[Unreleased]: https://github.com/fresmaa/bdd-runner-extension/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/fresmaa/bdd-runner-extension/compare/v0.1.37...v1.0.0
 [0.1.37]: https://github.com/fresmaa/bdd-runner-extension/compare/v0.1.36...v0.1.37
 [0.1.36]: https://github.com/fresmaa/bdd-runner-extension/releases/tag/v0.1.36
