@@ -71,3 +71,49 @@ Install project dependencies first, then run `BDD Runner: Diagnose Environment`.
 - Supports PowerShell 5, PowerShell 7, CMD, and Bash-based flows.
 - Handles command-quoting differences across shells.
 
+## Architecture Overview
+
+The extension is organized into focused modules so behavior is easier to maintain and test.
+
+### Module Map
+
+- `src/extension.ts`
+Orchestrates VS Code integration: command registration, Testing API wiring, terminal execution trigger, and diagnose command.
+
+- `src/gherkin.ts`
+Parses `.feature` text to extract feature title, nearest scenario, all scenarios, and `Scenario Outline` example rows.
+
+- `src/commandBuilder.ts`
+Builds runnable commands for scenario, feature, and example row execution using workspace configuration templates.
+
+- `src/commandTemplate.ts`
+Pure command templating utilities: placeholder replacement, shell quoting by dialect, and scenario+example regex construction.
+
+- `src/shell.ts`
+Runtime shell utilities: dialect detection, fallback logic (pwsh/powershell/cmd/bash), command normalization, process execution, and ANSI stripping.
+
+- `src/types.ts`
+Shared type definitions used across modules.
+
+### Runtime Flow
+
+1. A command is triggered from editor/title, command palette, or Testing panel.
+2. `extension.ts` reads context from active `.feature` document.
+3. `gherkin.ts` resolves feature/scenario/example metadata.
+4. `commandBuilder.ts` composes command text from configured templates.
+5. `shell.ts` normalizes and runs the command in the selected shell.
+6. Output is shown in terminal and mapped to test run status for Testing API execution.
+
+### Unit Tests
+
+The project includes Node test-runner based unit tests for parser and command template logic.
+
+- `src/test/gherkin.test.ts`
+- `src/test/commandTemplate.test.ts`
+
+Run tests with:
+
+```bash
+npm test
+```
+

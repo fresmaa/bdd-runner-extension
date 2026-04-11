@@ -153,6 +153,7 @@
   },
   "scripts": {
     "compile": "tsc -p .",
+    "test": "npm run compile && node --test \"out/**/*.test.js\"",
     "watch": "tsc -watch -p .",
     "package": "vsce package --allow-missing-repository",
     "publish": "vsce publish --allow-missing-repository",
