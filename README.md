@@ -1,88 +1,75 @@
-# BDD Scenario Runner
+<div align="center">
+
+# 🥒 BDD Scenario Runner
+
+[![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/fresma-labs.bdd-scenario-runner-extension?style=flat-square&color=blue)](https://marketplace.visualstudio.com/items?itemName=fresma-labs.bdd-scenario-runner-extension)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/fresma-labs.bdd-scenario-runner-extension?style=flat-square&color=green)](https://marketplace.visualstudio.com/items?itemName=fresma-labs.bdd-scenario-runner-extension)
+
+**Run Playwright BDD scenarios directly from `.feature` files in VS Code.**
 
 ![BDD Scenario Runner Banner](docs/images/hero.png)
 
-Run Playwright BDD scenarios directly from .feature files in VS Code.
+*BDD Scenario Runner helps QA and automation engineers run tests faster, troubleshoot easier, and stay focused without leaving their Gherkin files.*
 
-BDD Scenario Runner helps QA and automation engineers run tests faster without leaving Gherkin files.
+</div>
 
-## What You Get
+---
 
-- Run scenario at cursor.
-- Run all scenarios in current feature.
-- Re-run only failed tests.
-- Run from Testing panel, including Scenario Outline example rows.
-- Choose headless or headed mode.
+## 👀 See it in Action
 
-## Quick Start (1 Minute)
+*See how easy it is to run and debug your scenarios.*
 
-1. Open a project that already has Playwright + BDD setup.
-2. Open any .feature file.
-3. Place cursor inside a Scenario.
-4. Run command: BDD Runner: Run Current Scenario.
-5. Check output in terminal: BDD Scenario Runner.
+### 1) Run Scenario
 
-## Commands
+**Quick Preview:** ![Run Scenario Preview](docs/images/preview-run-scenario.gif)  
 
-| Command | Purpose |
-| --- | --- |
-| BDD Runner: Run Current Scenario | Run scenario at current cursor |
-| BDD Runner: Run Current Feature | Run all scenarios in the active feature file |
-| BDD Runner: Re-run Failed | Run failed tests from previous run |
-| BDD Runner: Stop Running | Stop scenario process that is currently running |
-| BDD Runner: Diagnose Environment | Check shell and runtime readiness |
+### 2) Run with Headless or Headed Mode
 
-## Recommended Settings
+**Quick Preview:** ![Run Mode Preview](docs/images/preview-headles-mode.gif)  
 
-| Setting | Default | Notes |
-| --- | --- | --- |
-| bddScenarioRunner.askRunMode | true | Show headless or headed picker each run |
-| bddScenarioRunner.defaultRunMode | headless | Used when askRunMode is false |
-| bddScenarioRunner.showTerminalOnRun | false | Reveal terminal automatically on run |
-| bddScenarioRunner.autoClearTerminal | true | Clear terminal before new execution |
-| bddScenarioRunner.forceShell | auto | Override shell only when needed |
+*(Tip: Keep each GIF under 15 seconds so users can quickly understand the flow.)*
 
-## Requirements
+---
 
-- Existing Playwright + BDD workflow in your project.
-- Node dependencies already installed.
-- Typical commands available in project context (for example bddgen, playwright, pnpm).
+## ✨ Key Features
 
-## Compatibility
+- **🎯 Precision Run:** Execute the exact scenario at your cursor, or run the entire `.feature` file.
+- **🔄 Re-run Failed:** Instantly retry failed tests from the last execution.
+- **🧪 Native Integration:** Fully supports VS Code's Testing Panel (including Scenario Outlines).
+- **🖥️ Mode Toggle:** Choose between Headless or Headed mode on the fly.
 
-- VS Code 1.90+
-- Windows, Linux, macOS
-- PowerShell, pwsh, CMD, Bash, POSIX sh
+## 🚀 Quick Start
 
-## Troubleshooting
+1. Open any `.feature` file in your Playwright + BDD project.
+2. Place your cursor inside a `Scenario`.
+3. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run: **`BDD Runner: Run Current Scenario`**.
 
-1. Nothing runs:
-Active file must be .feature.
+## ⌨️ Commands
 
-2. Shell mismatch on Windows:
-Set bddScenarioRunner.forceShell to pwsh or powershell.
+| Command | Description |
+| :--- | :--- |
+| `BDD Runner: Run Current Scenario` | Run scenario at cursor |
+| `BDD Runner: Run Current Feature` | Run all scenarios in active file |
+| `BDD Runner: Re-run Failed` | Execute only failed tests |
+| `BDD Runner: Stop Running` | Terminate active process |
 
-3. pnpm, playwright, or bddgen not found:
-Install dependencies, then run BDD Runner: Diagnose Environment.
+## ⚙️ Settings
 
-## Visual Flow
+Customize in `settings.json`:
 
-![Runtime Flow](docs/images/workflow.png)
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `bddScenarioRunner.askRunMode` | `true` | Show headless/headed prompt per run |
+| `bddScenarioRunner.defaultRunMode` | `headless` | Fallback if prompt is disabled |
+| `bddScenarioRunner.autoClearTerminal` | `true` | Clear terminal before execution |
+| `bddScenarioRunner.forceShell` | `auto` | Override default shell (e.g., `pwsh`) |
 
-## Full User Guide
+---
 
-Need detailed walkthrough, examples, and cross-platform checklist?
+<div align="center">
 
-- See [docs/USER-GUIDE.md](docs/USER-GUIDE.md)
+**[📚 View Full User Guide & Troubleshooting](docs/USER-GUIDE.md)** • **[📝 Changelog](CHANGELOG.md)**
 
-## Changelog
+*Requires VS Code 1.90+ and an existing Playwright+BDD project.*
 
-See full release history in [CHANGELOG.md](CHANGELOG.md).
-
-Latest highlights are available in the [0.1.37 entry](CHANGELOG.md#L12).
-
-## For Maintainers
-
-- Run tests: npm test
-- Create package: npm run package
-
+</div>
