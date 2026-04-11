@@ -177,7 +177,7 @@ export function getShellExecution(
 
       showWarningOnce(
         "missing-git-bash",
-        "BDD Runner: forced shell is Git Bash, but bash was not found. Falling back to PowerShell.",
+        "Playwright BDD Runner: forced shell is Git Bash, but bash was not found. Falling back to PowerShell.",
       );
     }
 
@@ -186,7 +186,7 @@ export function getShellExecution(
       if (!isExecutableAvailable(pwshPath)) {
         showWarningOnce(
           "missing-pwsh",
-          "BDD Runner: forced shell is pwsh, but executable was not found. Falling back to PowerShell.",
+          "Playwright BDD Runner: forced shell is pwsh, but executable was not found. Falling back to PowerShell.",
         );
         return {
           shell: "powershell.exe",
@@ -226,7 +226,7 @@ export function getShellExecution(
     if (!isExecutableAvailable(pwshPath)) {
       showWarningOnce(
         "missing-pwsh-nonwin",
-        "BDD Runner: forced shell is pwsh, but executable was not found. Falling back to POSIX shell.",
+        "Playwright BDD Runner: forced shell is pwsh, but executable was not found. Falling back to POSIX shell.",
       );
       return { shell: "sh", args: ["-c", command] };
     }
@@ -313,7 +313,7 @@ export function resolveTerminalShell(dialect: ShellDialect): {
       recreateExisting: true,
       warningKey: "missing-git-bash-terminal",
       warningMessage:
-        "BDD Runner: forced shell is Git Bash, but bash was not found. Terminal falls back to PowerShell.",
+        "Playwright BDD Runner: forced shell is Git Bash, but bash was not found. Terminal falls back to PowerShell.",
     };
   }
 
@@ -326,7 +326,7 @@ export function resolveTerminalShell(dialect: ShellDialect): {
         recreateExisting: true,
         warningKey: "missing-pwsh-terminal",
         warningMessage:
-          "BDD Runner: forced shell is pwsh, but executable was not found. Terminal falls back to PowerShell.",
+          "Playwright BDD Runner: forced shell is pwsh, but executable was not found. Terminal falls back to PowerShell.",
       };
     }
 
@@ -354,7 +354,7 @@ export function resolveTerminalShell(dialect: ShellDialect): {
       recreateExisting: true,
       warningKey: "auto-bash-fallback-terminal",
       warningMessage:
-        "BDD Runner: VS Code default profile is bash, but bash was not found. Terminal falls back to PowerShell.",
+        "Playwright BDD Runner: VS Code default profile is bash, but bash was not found. Terminal falls back to PowerShell.",
     };
   }
 

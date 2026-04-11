@@ -1,15 +1,15 @@
 <div align="center">
 
-# 🥒 BDD Scenario Runner
+# 🥒 Playwright BDD Runner
 
 [![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/fresma-labs.bdd-scenario-runner-extension?style=flat-square&color=blue)](https://marketplace.visualstudio.com/items?itemName=fresma-labs.bdd-scenario-runner-extension)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/fresma-labs.bdd-scenario-runner-extension?style=flat-square&color=green)](https://marketplace.visualstudio.com/items?itemName=fresma-labs.bdd-scenario-runner-extension)
 
 **Run Playwright BDD scenarios directly from `.feature` files in VS Code.**
 
-![BDD Scenario Runner Banner](docs/images/hero.png)
+![Playwright BDD Runner Banner](docs/images/hero.png)
 
-*BDD Scenario Runner helps QA and automation engineers run tests faster, troubleshoot easier, and stay focused without leaving their Gherkin files.*
+*Playwright BDD Runner helps QA and automation engineers run tests faster, troubleshoot easier, and stay focused without leaving their Gherkin files.*
 
 </div>
 
@@ -42,16 +42,16 @@
 
 1. Open any `.feature` file in your Playwright + BDD project.
 2. Place your cursor inside a `Scenario`.
-3. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run: **`BDD Runner: Run Current Scenario`**.
+3. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run: **`Playwright BDD Runner: Run Scenario`**.
 
 ## ⌨️ Commands
 
 | Command | Description |
 | :--- | :--- |
-| `BDD Runner: Run Current Scenario` | Run scenario at cursor |
-| `BDD Runner: Run Current Feature` | Run all scenarios in active file |
-| `BDD Runner: Re-run Failed` | Execute only failed tests |
-| `BDD Runner: Stop Running` | Terminate active process |
+| `Playwright BDD Runner: Run Scenario` | Run scenario at cursor |
+| `Playwright BDD Runner: Run Feature` | Run all scenarios in active file |
+| `Playwright BDD Runner: Re-run Failed` | Execute only failed tests |
+| `Playwright BDD Runner: Stop` | Terminate active process |
 
 ## ⚙️ Settings
 

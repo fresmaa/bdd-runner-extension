@@ -1,6 +1,6 @@
-# BDD Scenario Runner User Guide
+# Playwright BDD Runner User Guide
 
-This guide is for daily users of BDD Scenario Runner.
+This guide is for daily users of Playwright BDD Runner.
 
 ## 1. Prerequisites
 
@@ -16,19 +16,19 @@ Before running commands from VS Code:
 2. Open any .feature file.
 3. Put cursor inside a Scenario block.
 4. Open Command Palette.
-5. Run BDD Runner: Run Current Scenario.
+5. Run Playwright BDD Runner: Run Scenario.
 6. Choose run mode (headless or headed) if prompted.
-7. Watch terminal output in BDD Scenario Runner terminal.
+7. Watch terminal output in Playwright BDD Runner terminal.
 
 ## 3. Command Reference
 
 | Command | What it does | Typical use |
 | --- | --- | --- |
-| BDD Runner: Run Current Scenario | Runs scenario at cursor | Fast scenario-level check |
-| BDD Runner: Run Current Feature | Runs all scenarios in active file | Validate full feature |
-| BDD Runner: Re-run Failed | Runs last failed set | Verify bug fix quickly |
-| BDD Runner: Stop Running | Sends stop signal to active run | Stop long-running or stuck scenario |
-| BDD Runner: Diagnose Environment | Checks shell/runtime setup | Debug execution issues |
+| Playwright BDD Runner: Run Scenario | Runs scenario at cursor | Fast scenario-level check |
+| Playwright BDD Runner: Run Feature | Runs all scenarios in active file | Validate full feature |
+| Playwright BDD Runner: Re-run Failed | Runs last failed set | Verify bug fix quickly |
+| Playwright BDD Runner: Stop | Sends stop signal to active run | Stop long-running or stuck scenario |
+| Playwright BDD Runner: Diagnose Environment | Checks shell/runtime setup | Debug execution issues |
 
 ## 4. Testing Panel Usage
 

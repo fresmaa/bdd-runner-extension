@@ -32,7 +32,7 @@ let activeTestRunCount = 0;
 
 export function activate(context: vscode.ExtensionContext): void {
   const stopStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1100);
-  stopStatusBar.text = "$(stop-circle) Stop BDD Run";
+  stopStatusBar.text = "$(stop-circle) Stop Playwright BDD Run";
   stopStatusBar.command = "bddScenarioRunner.stopRunning";
   stopStatusBar.tooltip = "Stop currently running BDD scenario process";
 
@@ -147,7 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   );
 
-  testController = vscode.tests.createTestController(TEST_CONTROLLER_ID, "BDD Scenario Runner");
+  testController = vscode.tests.createTestController(TEST_CONTROLLER_ID, "Playwright BDD Runner");
   const runHeadlessProfile = testController.createRunProfile(
     "Run Headless",
     vscode.TestRunProfileKind.Run,
@@ -247,7 +247,7 @@ function runRerunFailed(runMode: RunMode): void {
 
 function runCommandInTerminal(command: string, cwd: vscode.Uri | undefined): void {
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
-  const terminalName = config.get<string>("terminalName", "BDD Scenario Runner");
+  const terminalName = config.get<string>("terminalName", "Playwright BDD Runner");
   const autoClearTerminal = config.get<boolean>("autoClearTerminal", true);
   const showTerminalOnRun = config.get<boolean>("showTerminalOnRun", false);
   const dialect = detectShellDialect();
@@ -273,7 +273,7 @@ async function stopRunningScenario(): Promise<void> {
   }
 
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
-  const terminalName = config.get<string>("terminalName", "BDD Scenario Runner");
+  const terminalName = config.get<string>("terminalName", "Playwright BDD Runner");
   const terminal = vscode.window.terminals.find((item) => item.name === terminalName);
 
   if (terminal) {
@@ -449,7 +449,7 @@ async function resolveRunMode(config: vscode.WorkspaceConfiguration): Promise<Ru
     ],
     {
       placeHolder: "Choose run mode",
-      title: "BDD Scenario Runner",
+      title: "Playwright BDD Runner",
     },
   );
 
@@ -635,7 +635,7 @@ function escapeRegexLiteral(value: string): string {
 }
 
 async function runEnvironmentDiagnosis(): Promise<void> {
-  const output = vscode.window.createOutputChannel("BDD Runner Diagnose");
+  const output = vscode.window.createOutputChannel("Playwright BDD Runner Diagnose");
   output.clear();
   output.show(true);
 
@@ -644,7 +644,7 @@ async function runEnvironmentDiagnosis(): Promise<void> {
   const config = vscode.workspace.getConfiguration("terminal.integrated");
   const defaultWindowsProfile = config.get<string>("defaultProfile.windows", "");
 
-  output.appendLine("BDD Runner Environment Diagnose");
+  output.appendLine("Playwright BDD Runner Environment Diagnose");
   output.appendLine("================================");
   output.appendLine(`Platform: ${process.platform}`);
   output.appendLine(`Configured forceShell: ${forceShell}`);
@@ -684,7 +684,7 @@ async function runEnvironmentDiagnosis(): Promise<void> {
     output.appendLine("");
   }
 
-  vscode.window.showInformationMessage("BDD Runner diagnose completed. Check 'BDD Runner Diagnose' output.");
+  vscode.window.showInformationMessage("Playwright BDD Runner diagnose completed. Check 'Playwright BDD Runner Diagnose' output.");
 }
 
 function collectTestItems(request: vscode.TestRunRequest): vscode.TestItem[] {

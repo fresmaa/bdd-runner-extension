@@ -1,7 +1,7 @@
 {
   "name": "bdd-scenario-runner-extension",
-  "displayName": "BDD Scenario Runner",
-  "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
+  "displayName": "Playwright BDD Runner",
+  "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin .feature files.",
   "version": "0.1.38",
   "publisher": "fresma-labs",
   "license": "MIT",
@@ -16,6 +16,15 @@
   "categories": [
     "Testing"
   ],
+  "keywords": [
+    "playwright",
+    "bdd",
+    "gherkin",
+    "feature",
+    "qa",
+    "cucumber",
+    "test-runner"
+  ],
   "activationEvents": [
     "onLanguage:feature"
   ],
@@ -26,6 +35,7 @@
       {
         "command": "bddScenarioRunner.runScenarioTag",
         "title": "Run Scenario",
+        "category": "Playwright BDD Runner",
         "icon": {
           "light": "docs/images/icon-run.png",
           "dark": "docs/images/icon-run.png"
@@ -33,11 +43,13 @@
       },
       {
         "command": "bddScenarioRunner.runScenarioTagAtLine",
-        "title": "Run Scenario at Line"
+        "title": "Run Scenario at Line",
+        "category": "Playwright BDD Runner"
       },
       {
         "command": "bddScenarioRunner.runCurrentFeature",
         "title": "Run Feature",
+        "category": "Playwright BDD Runner",
         "icon": {
           "light": "docs/images/icon-feature.png",
           "dark": "docs/images/icon-feature.png"
@@ -46,6 +58,7 @@
       {
         "command": "bddScenarioRunner.rerunFailed",
         "title": "Re-run Failed",
+        "category": "Playwright BDD Runner",
         "icon": {
           "light": "docs/images/icon-rerun.png",
           "dark": "docs/images/icon-rerun.png"
@@ -53,11 +66,13 @@
       },
       {
         "command": "bddScenarioRunner.diagnoseEnvironment",
-        "title": "Diagnose Environment"
+        "title": "Diagnose Environment",
+        "category": "Playwright BDD Runner"
       },
       {
         "command": "bddScenarioRunner.stopRunning",
         "title": "Stop",
+        "category": "Playwright BDD Runner",
         "icon": {
           "light": "docs/images/icon-stop-light.png",
           "dark": "docs/images/icon-stop-dark.png"
@@ -107,7 +122,7 @@
       ]
     },
     "configuration": {
-      "title": "BDD Scenario Runner",
+      "title": "Playwright BDD Runner",
       "properties": {
         "bddScenarioRunner.commandTemplate": {
           "type": "string",
@@ -131,7 +146,7 @@
         },
         "bddScenarioRunner.terminalName": {
           "type": "string",
-          "default": "BDD Scenario Runner",
+          "default": "Playwright BDD Runner",
           "description": "Terminal name used to run BDD scenarios."
         },
         "bddScenarioRunner.autoClearTerminal": {

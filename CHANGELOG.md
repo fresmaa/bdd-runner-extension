@@ -9,6 +9,9 @@ This format is inspired by Keep a Changelog and follows semantic versioning.
 ### Added
 - Placeholder for upcoming changes.
 
+### Changed
+- Rebranded user-facing extension name to Playwright BDD Runner across marketplace metadata, commands category labels, docs, terminal defaults, and runtime messages.
+
 ## [0.1.37] - 2026-04-11
 
 ### Added
