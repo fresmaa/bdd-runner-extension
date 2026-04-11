@@ -2,7 +2,7 @@
   "name": "bdd-scenario-runner-extension",
   "displayName": "BDD Scenario Runner",
   "description": "VS Code extension to run Playwright BDD scenarios directly from Gherkin feature files.",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "publisher": "fresma-labs",
   "license": "MIT",
   "repository": {
