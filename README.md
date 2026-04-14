@@ -35,8 +35,9 @@
 
 - **🎯 Precision Run:** Execute the exact scenario at your cursor, or run the entire `.feature` file.
 - **🔄 Re-run Failed:** Instantly retry failed tests from the last execution.
+- **📊 Report Generator:** Generate/open Playwright report or Allure report from Command Palette.
 - **🧪 Native Integration:** Fully supports VS Code's Testing Panel (including Scenario Outlines).
-- **🖥️ Mode Toggle:** Choose between Headless or Headed mode on the fly.
+- **🖱️ Profile-Based Flow:** Click run icon for default Headless profile, or use Execute Using Profile to pick Headless/Headed. After profile selection, choose report option (Playwright, Allure, or none).
 
 ## 🚀 Quick Start
 
@@ -51,6 +52,9 @@
 | `Playwright BDD Runner: Run Scenario` | Run scenario at cursor |
 | `Playwright BDD Runner: Run Feature` | Run all scenarios in active file |
 | `Playwright BDD Runner: Re-run Failed` | Execute only failed tests |
+| `Playwright BDD Runner: Generate Report` | Choose Playwright report or Allure report |
+| `Playwright BDD Runner: Generate Playwright Report` | Open Playwright HTML report directly |
+| `Playwright BDD Runner: Generate Allure Report` | Generate and open Allure report directly |
 | `Playwright BDD Runner: Stop` | Terminate active process |
 
 ## ⚙️ Settings
@@ -61,6 +65,8 @@ Customize in `settings.json`:
 | :--- | :--- | :--- |
 | `bddScenarioRunner.askRunMode` | `true` | Show headless/headed prompt per run |
 | `bddScenarioRunner.defaultRunMode` | `headless` | Fallback if prompt is disabled |
+| `bddScenarioRunner.playwrightReportCommandTemplate` | `pnpm playwright show-report` | Command template for Playwright report |
+| `bddScenarioRunner.allureReportCommandTemplate` | `npx allure generate allure-results --clean && npx allure open allure-report` | Command template for Allure report |
 | `bddScenarioRunner.autoClearTerminal` | `true` | Clear terminal before execution |
 | `bddScenarioRunner.forceShell` | `auto` | Override default shell (e.g., `pwsh`) |
 

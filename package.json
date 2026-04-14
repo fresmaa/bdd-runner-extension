@@ -77,6 +77,25 @@
           "light": "docs/images/icon-stop-light.png",
           "dark": "docs/images/icon-stop-dark.png"
         }
+      },
+      {
+        "command": "bddScenarioRunner.generateReport",
+        "title": "Generate Report",
+        "category": "Playwright BDD Runner",
+        "icon": {
+          "light": "docs/images/icon-report-light.png",
+          "dark": "docs/images/icon-report-dark.png"
+        }
+      },
+      {
+        "command": "bddScenarioRunner.generatePlaywrightReport",
+        "title": "Generate Playwright Report",
+        "category": "Playwright BDD Runner"
+      },
+      {
+        "command": "bddScenarioRunner.generateAllureReport",
+        "title": "Generate Allure Report",
+        "category": "Playwright BDD Runner"
       }
     ],
     "menus": {
@@ -99,6 +118,10 @@
           "command": "bddScenarioRunner.stopRunning",
           "when": "resourceExtname == .feature",
           "group": "navigation@19"
+        },
+        {
+          "command": "bddScenarioRunner.generateReport",
+          "group": "navigation@23"
         }
       ],
       "commandPalette": [
@@ -118,6 +141,15 @@
         },
         {
           "command": "bddScenarioRunner.stopRunning"
+        },
+        {
+          "command": "bddScenarioRunner.generateReport"
+        },
+        {
+          "command": "bddScenarioRunner.generatePlaywrightReport"
+        },
+        {
+          "command": "bddScenarioRunner.generateAllureReport"
         }
       ]
     },
@@ -143,6 +175,16 @@
           "type": "string",
           "default": "pnpm bddgen && pnpm playwright test --last-failed{headedFlag}",
           "description": "Re-run failed template. Placeholders: {runMode}, {headedFlag}."
+        },
+        "bddScenarioRunner.playwrightReportCommandTemplate": {
+          "type": "string",
+          "default": "pnpm playwright show-report",
+          "description": "Playwright report template. Example: pnpm playwright show-report"
+        },
+        "bddScenarioRunner.allureReportCommandTemplate": {
+          "type": "string",
+          "default": "npx allure generate allure-results --clean && npx allure open allure-report",
+          "description": "Allure report template. Example: npx allure generate allure-results --clean && npx allure open allure-report"
         },
         "bddScenarioRunner.terminalName": {
           "type": "string",

@@ -23,6 +23,7 @@ export type ShellDialect = "bash" | "powershell" | "cmd" | "posix";
 export type ForceShell = "auto" | "git-bash" | "pwsh" | "powershell" | "cmd" | "bash";
 
 export type RunMode = "headless" | "headed";
+export type ReportType = "playwright" | "allure";
 
 export type RunCommandInput = {
   uri?: vscode.Uri;

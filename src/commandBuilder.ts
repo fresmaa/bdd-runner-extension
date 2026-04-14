@@ -1,11 +1,21 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { FeatureContext, RunMode, ScenarioContext } from "./types";
+import { FeatureContext, ReportType, RunMode, ScenarioContext } from "./types";
 import { detectShellDialect } from "./shell";
 import {
   buildCommand as buildCommandWithDialect,
   buildScenarioExampleRegex,
 } from "./commandTemplate";
+
+const REPORT_TEMPLATE_CONFIG_KEY: Record<ReportType, string> = {
+  playwright: "playwrightReportCommandTemplate",
+  allure: "allureReportCommandTemplate",
+};
+
+const REPORT_TEMPLATE_DEFAULT: Record<ReportType, string> = {
+  playwright: "pnpm playwright show-report",
+  allure: "npx allure generate allure-results --clean && npx allure open allure-report",
+};
 
 export function buildScenarioCommand(
   document: vscode.TextDocument,
@@ -96,4 +106,19 @@ export function buildCommand(
   },
 ): string {
   return buildCommandWithDialect(template, values, detectShellDialect());
+}
+
+export function buildReportCommand(reportType: ReportType): string {
+  const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+  const key = REPORT_TEMPLATE_CONFIG_KEY[reportType];
+  const template = config.get<string>(key, REPORT_TEMPLATE_DEFAULT[reportType]);
+
+  return buildCommand(template, {
+    scenario: "",
+    featureName: "",
+    example: "",
+    scenarioExampleRegex: "",
+    featurePath: "",
+    runMode: "headless",
+  });
 }
