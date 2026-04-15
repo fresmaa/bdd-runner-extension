@@ -37,6 +37,8 @@
 - **🔄 Re-run Failed:** Instantly retry failed tests from the last execution.
 - **🧪 Native Integration:** Fully supports VS Code's Testing Panel (including Scenario Outlines).
 - **🖥️ Mode Toggle:** Choose between Headless or Headed mode on the fly.
+- **📦 Package Manager Aware:** Auto-detects `npm`, `yarn`, or `pnpm` from your project's `packageManager` field or lockfile.
+- **🗂️ Monorepo Friendly:** Runs commands from the nearest `package.json` to the feature file, not the workspace root.
 
 ## 🚀 Quick Start
 
@@ -59,10 +61,13 @@ Customize in `settings.json`:
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
+| `bddScenarioRunner.packageManager` | `auto` | Package manager (`auto`/`npm`/`yarn`/`pnpm`). Auto-detects from `packageManager` field or lockfiles |
 | `bddScenarioRunner.askRunMode` | `true` | Show headless/headed prompt per run |
 | `bddScenarioRunner.defaultRunMode` | `headless` | Fallback if prompt is disabled |
 | `bddScenarioRunner.autoClearTerminal` | `true` | Clear terminal before execution |
 | `bddScenarioRunner.forceShell` | `auto` | Override default shell (e.g., `pwsh`) |
+
+The default command templates use a `{pm}` placeholder that resolves to the detected runner (`npx`/`yarn`/`pnpm`). You can override the templates directly if your workflow needs a custom invocation.
 
 ---
 
