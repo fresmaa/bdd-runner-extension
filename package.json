@@ -124,25 +124,36 @@
     "configuration": {
       "title": "Playwright BDD Runner",
       "properties": {
+        "bddScenarioRunner.packageManager": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "npm",
+            "yarn",
+            "pnpm"
+          ],
+          "default": "auto",
+          "description": "Package manager to use for running commands. 'auto' detects from packageManager field in package.json or lockfiles."
+        },
         "bddScenarioRunner.commandTemplate": {
           "type": "string",
-          "default": "pnpm bddgen && pnpm playwright test --grep {scenarioQuoted}{headedFlag}",
-          "description": "Scenario run template. Placeholders: {scenario}, {scenarioQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+          "default": "{pm} bddgen && {pm} playwright test --grep {scenarioQuoted}{headedFlag}",
+          "description": "Scenario run template. Placeholders: {pm}, {scenario}, {scenarioQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
         },
         "bddScenarioRunner.featureCommandTemplate": {
           "type": "string",
-          "default": "pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}",
-          "description": "Feature run template. Placeholders: {featureName}, {featureNameQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+          "default": "{pm} bddgen && {pm} playwright test --grep {featureNameQuoted}{headedFlag}",
+          "description": "Feature run template. Placeholders: {pm}, {featureName}, {featureNameQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
         },
         "bddScenarioRunner.exampleCommandTemplate": {
           "type": "string",
-          "default": "pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
-          "description": "Example row run template. Placeholders: {scenario}, {scenarioQuoted}, {example}, {exampleQuoted}, {scenarioExampleRegex}, {scenarioExampleRegexQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
+          "default": "{pm} bddgen && {pm} playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
+          "description": "Example row run template. Placeholders: {pm}, {scenario}, {scenarioQuoted}, {example}, {exampleQuoted}, {scenarioExampleRegex}, {scenarioExampleRegexQuoted}, {featurePath}, {featurePathQuoted}, {runMode}, {headedFlag}."
         },
         "bddScenarioRunner.rerunFailedCommandTemplate": {
           "type": "string",
-          "default": "pnpm bddgen && pnpm playwright test --last-failed{headedFlag}",
-          "description": "Re-run failed template. Placeholders: {runMode}, {headedFlag}."
+          "default": "{pm} bddgen && {pm} playwright test --last-failed{headedFlag}",
+          "description": "Re-run failed template. Placeholders: {pm}, {runMode}, {headedFlag}."
         },
         "bddScenarioRunner.terminalName": {
           "type": "string",
