@@ -6,6 +6,23 @@ import {
   buildCommand as buildCommandWithDialect,
   buildScenarioExampleRegex,
 } from "./commandTemplate";
+import { findNearestPackageRoot, resolveRunner } from "./packageManager";
+
+function getPackageRoot(document: vscode.TextDocument): string {
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+  return findNearestPackageRoot(document.uri.fsPath, workspaceFolder?.uri.fsPath);
+}
+
+export function resolveRunCwd(document: vscode.TextDocument): vscode.Uri {
+  return vscode.Uri.file(getPackageRoot(document));
+}
+
+function resolveDocumentContext(document: vscode.TextDocument) {
+  const packageRoot = getPackageRoot(document);
+  const featurePathRelative = path.relative(packageRoot, document.uri.fsPath);
+  const pm = resolveRunner(vscode.Uri.file(packageRoot));
+  return { featurePathRelative, pm };
+}
 
 export function buildScenarioCommand(
   document: vscode.TextDocument,
@@ -15,12 +32,9 @@ export function buildScenarioCommand(
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const template = config.get<string>(
     "commandTemplate",
-    "pnpm test:run --scenario {scenarioQuoted}{headedFlag}",
+    "{pm} bddgen && {pm} playwright test --grep {scenarioQuoted}{headedFlag}",
   );
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-  const featurePathRelative = workspaceFolder
-    ? path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-    : document.uri.fsPath;
+  const { featurePathRelative, pm } = resolveDocumentContext(document);
 
   return buildCommand(template, {
     scenario: scenarioCtx.scenarioName,
@@ -29,6 +43,7 @@ export function buildScenarioCommand(
     scenarioExampleRegex: "",
     featurePath: featurePathRelative,
     runMode,
+    pm,
   });
 }
 
@@ -40,12 +55,9 @@ export function buildFeatureCommand(
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const template = config.get<string>(
     "featureCommandTemplate",
-    "pnpm bddgen && pnpm playwright test --grep {featureNameQuoted}{headedFlag}",
+    "{pm} bddgen && {pm} playwright test --grep {featureNameQuoted}{headedFlag}",
   );
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-  const featurePathRelative = workspaceFolder
-    ? path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-    : document.uri.fsPath;
+  const { featurePathRelative, pm } = resolveDocumentContext(document);
 
   return buildCommand(template, {
     scenario: "",
@@ -54,6 +66,7 @@ export function buildFeatureCommand(
     scenarioExampleRegex: "",
     featurePath: featurePathRelative,
     runMode,
+    pm,
   });
 }
 
@@ -66,12 +79,9 @@ export function buildExampleCommand(
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const template = config.get<string>(
     "exampleCommandTemplate",
-    "pnpm bddgen && pnpm playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
+    "{pm} bddgen && {pm} playwright test --grep {scenarioExampleRegexQuoted}{headedFlag}",
   );
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-  const featurePathRelative = workspaceFolder
-    ? path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-    : document.uri.fsPath;
+  const { featurePathRelative, pm } = resolveDocumentContext(document);
   const scenarioExampleRegex = buildScenarioExampleRegex(scenarioCtx.scenarioName, exampleIndex);
 
   return buildCommand(template, {
@@ -81,6 +91,7 @@ export function buildExampleCommand(
     scenarioExampleRegex,
     featurePath: featurePathRelative,
     runMode,
+    pm,
   });
 }
 
@@ -93,6 +104,7 @@ export function buildCommand(
     scenarioExampleRegex: string;
     featurePath: string;
     runMode: RunMode;
+    pm?: string;
   },
 ): string {
   return buildCommandWithDialect(template, values, detectShellDialect());
