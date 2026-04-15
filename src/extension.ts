@@ -5,8 +5,16 @@ import {
   buildExampleCommand,
   buildFeatureCommand,
   buildScenarioCommand,
+  resolveRunCwd,
 } from "./commandBuilder";
 import { getAllScenarioContexts, getFeatureContext, getScenarioContext } from "./gherkin";
+import {
+  clearPackageManagerCache,
+  getPackageManagerExecPrefix,
+  getPackageManagerRunner,
+  resolvePackageManager,
+  resolveRunner,
+} from "./packageManager";
 import {
   detectShellDialect,
   executeCommandWithOutput,
@@ -180,6 +188,12 @@ export function activate(context: vscode.ExtensionContext): void {
     testController.items.delete(doc.uri.toString());
   });
 
+  const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration("bddScenarioRunner.packageManager")) {
+      clearPackageManagerCache();
+    }
+  });
+
   context.subscriptions.push(
     runScenarioTag,
     runScenarioTagAtLine,
@@ -193,6 +207,7 @@ export function activate(context: vscode.ExtensionContext): void {
     openDocDisposable,
     changeDocDisposable,
     closeDocDisposable,
+    configChangeDisposable,
   );
 }
 
@@ -205,10 +220,9 @@ function runCurrentFeatureByContext(
   featureCtx: FeatureContext,
   runMode: RunMode,
 ): void {
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
   const command = buildFeatureCommand(document, featureCtx, runMode);
 
-  runCommandInTerminal(command, workspaceFolder?.uri);
+  runCommandInTerminal(command, resolveRunCwd(document));
   vscode.window.showInformationMessage(`Running feature \"${featureCtx.featureName}\" (${runMode})`);
 }
 
@@ -218,10 +232,9 @@ function runScenarioByContext(
   runMode: RunMode,
 ): void {
   const scenarioName = scenarioCtx.scenarioName;
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
   const command = buildScenarioCommand(document, scenarioCtx, runMode);
 
-  runCommandInTerminal(command, workspaceFolder?.uri);
+  runCommandInTerminal(command, resolveRunCwd(document));
   vscode.window.showInformationMessage(`Running scenario \"${scenarioName}\" (${runMode})`);
 }
 
@@ -229,8 +242,13 @@ function runRerunFailed(runMode: RunMode): void {
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const template = config.get<string>(
     "rerunFailedCommandTemplate",
-    "pnpm bddgen && pnpm playwright test --last-failed{headedFlag}",
+    "{pm} bddgen && {pm} playwright test --last-failed{headedFlag}",
   );
+  const activeDoc = vscode.window.activeTextEditor?.document;
+  const cwd = activeDoc && isFeatureDocument(activeDoc)
+    ? resolveRunCwd(activeDoc)
+    : vscode.workspace.workspaceFolders?.[0]?.uri;
+  const pm = resolveRunner(cwd);
   const command = buildCommand(template, {
     scenario: "",
     featureName: "",
@@ -238,10 +256,9 @@ function runRerunFailed(runMode: RunMode): void {
     scenarioExampleRegex: "",
     featurePath: "",
     runMode,
+    pm,
   });
-
-  const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri;
-  runCommandInTerminal(command, workspaceFolder);
+  runCommandInTerminal(command, cwd);
   vscode.window.showInformationMessage(`Re-running failed tests (${runMode})`);
 }
 
@@ -505,7 +522,7 @@ async function runFromTestItems(
         scenarioRef.kind === "example" && scenarioRef.exampleIndex
           ? buildExampleCommand(doc, ctx, scenarioRef.exampleIndex, runMode)
           : buildScenarioCommand(doc, ctx, runMode);
-      const cwd = vscode.workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath;
+      const cwd = resolveRunCwd(doc)?.fsPath;
 
       let outputBuffer = `$ ${command}\r\n`;
       run.appendOutput(`$ ${command}\r\n`, undefined, item);
@@ -662,7 +679,10 @@ async function runEnvironmentDiagnosis(): Promise<void> {
     return;
   }
 
-  const checks = ["pnpm --version", "pnpm exec playwright --version", "pnpm exec bddgen --help"];
+  const pm = resolvePackageManager(vscode.Uri.file(workspace));
+  const runner = getPackageManagerRunner(pm);
+  const execPrefix = getPackageManagerExecPrefix(pm);
+  const checks = [`${runner} --version`, `${execPrefix} playwright --version`, `${execPrefix} bddgen --help`];
 
   for (const check of checks) {
     const lines: string[] = [];
