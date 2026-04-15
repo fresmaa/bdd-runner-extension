@@ -9,11 +9,13 @@ export function buildCommand(
     scenarioExampleRegex: string;
     featurePath: string;
     runMode: RunMode;
+    pm?: string;
   },
   dialect: ShellDialect,
 ): string {
   const headedFlag = values.runMode === "headed" ? " --headed" : "";
   const replacements: Record<string, string> = {
+    "{pm}": values.pm ?? "npx",
     "{scenario}": values.scenario,
     "{scenarioQuoted}": shellQuote(values.scenario, dialect),
     "{featureName}": values.featureName,

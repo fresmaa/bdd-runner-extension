@@ -36,3 +36,38 @@ test("buildCommand replaces placeholders and headed flag", () => {
     "pnpm test --grep 'Checkout flow' --headed --path 'features/checkout.feature'",
   );
 });
+
+test("buildCommand replaces {pm} placeholder", () => {
+  const actual = buildCommand(
+    "{pm} bddgen && {pm} playwright test --grep {scenarioQuoted}{headedFlag}",
+    {
+      scenario: "Login",
+      featureName: "",
+      example: "",
+      scenarioExampleRegex: "",
+      featurePath: "",
+      runMode: "headless",
+      pm: "yarn",
+    },
+    "bash",
+  );
+
+  assert.equal(actual, "yarn bddgen && yarn playwright test --grep 'Login'");
+});
+
+test("buildCommand defaults {pm} to npx when not provided", () => {
+  const actual = buildCommand(
+    "{pm} bddgen && {pm} playwright test --grep {scenarioQuoted}{headedFlag}",
+    {
+      scenario: "Login",
+      featureName: "",
+      example: "",
+      scenarioExampleRegex: "",
+      featurePath: "",
+      runMode: "headless",
+    },
+    "bash",
+  );
+
+  assert.equal(actual, "npx bddgen && npx playwright test --grep 'Login'");
+});
