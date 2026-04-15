@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-export type PackageManagerName = "npm" | "yarn" | "pnpm";
+export type PackageManagerName = "npm" | "yarn" | "pnpm" | "bun";
 
 const detectionCache = new Map<string, PackageManagerName>();
 const packageRootCache = new Map<string, string>();
@@ -12,12 +12,15 @@ export function clearPackageManagerCache(): void {
 }
 
 export function getPackageManagerRunner(pm: PackageManagerName): string {
-  return pm === "npm" ? "npx" : pm;
+  if (pm === "npm") return "npx";
+  if (pm === "bun") return "bunx";
+  return pm;
 }
 
 export function getPackageManagerExecPrefix(pm: PackageManagerName): string {
   if (pm === "pnpm") return "pnpm exec";
   if (pm === "yarn") return "yarn";
+  if (pm === "bun") return "bunx";
   return "npx";
 }
 
@@ -68,7 +71,7 @@ function detectPackageManagerUncached(workspaceRoot: string): PackageManagerName
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
     if (typeof pkg.packageManager === "string") {
       const name = pkg.packageManager.split("@")[0];
-      if (name === "yarn" || name === "pnpm" || name === "npm") {
+      if (name === "yarn" || name === "pnpm" || name === "npm" || name === "bun") {
         return name;
       }
     }
@@ -80,6 +83,8 @@ function detectPackageManagerUncached(workspaceRoot: string): PackageManagerName
 
   if (fs.existsSync(path.join(workspaceRoot, "pnpm-lock.yaml"))) return "pnpm";
   if (fs.existsSync(path.join(workspaceRoot, "yarn.lock"))) return "yarn";
+  if (fs.existsSync(path.join(workspaceRoot, "bun.lockb"))) return "bun";
+  if (fs.existsSync(path.join(workspaceRoot, "bun.lock"))) return "bun";
   if (fs.existsSync(path.join(workspaceRoot, "package-lock.json"))) return "npm";
 
   return "npm";

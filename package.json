@@ -130,7 +130,8 @@
             "auto",
             "npm",
             "yarn",
-            "pnpm"
+            "pnpm",
+            "bun"
           ],
           "default": "auto",
           "description": "Package manager to use for running commands. 'auto' detects from packageManager field in package.json or lockfiles."

@@ -22,7 +22,7 @@ export function resolvePackageManager(workspaceFolder?: vscode.Uri): PackageMana
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const setting = config.get<string>("packageManager", "auto");
 
-  if (setting === "npm" || setting === "yarn" || setting === "pnpm") {
+  if (setting === "npm" || setting === "yarn" || setting === "pnpm" || setting === "bun") {
     return setting;
   }
 
