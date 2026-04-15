@@ -130,6 +130,29 @@ test("findNearestPackageRoot stops at workspace boundary", () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test("findNearestPackageRoot caches by directory so sibling files share the entry", () => {
+  clearPackageManagerCache();
+  const root = mkTmp();
+  const pkg = path.join(root, "packages", "app");
+  const features = path.join(pkg, "features");
+  fs.mkdirSync(features, { recursive: true });
+  writePkg(pkg, { name: "app" });
+  const first = path.join(features, "a.feature");
+  const second = path.join(features, "b.feature");
+  fs.writeFileSync(first, "");
+  fs.writeFileSync(second, "");
+
+  assert.equal(findNearestPackageRoot(first, root), pkg);
+
+  // Delete the package.json after the first call. If the second call for a
+  // sibling file is served from the cache it still returns `pkg`; if the cache
+  // key were per-file, it would miss and walk up to `root`.
+  fs.rmSync(path.join(pkg, "package.json"));
+
+  assert.equal(findNearestPackageRoot(second, root), pkg);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test("findNearestPackageRoot returns workspace root when no package.json exists anywhere", () => {
   clearPackageManagerCache();
   const root = mkTmp();
