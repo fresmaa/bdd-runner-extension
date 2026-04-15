@@ -40,6 +40,7 @@ Before running commands from VS Code:
 
 | Setting | When to change |
 | --- | --- |
+| bddScenarioRunner.packageManager | Set to `npm`, `yarn`, or `pnpm` to override auto-detection |
 | bddScenarioRunner.askRunMode | Disable if you always use one mode |
 | bddScenarioRunner.defaultRunMode | Set preferred default when prompt is off |
 | bddScenarioRunner.showTerminalOnRun | Enable if you want terminal to auto-open |
@@ -59,10 +60,14 @@ If your environment behaves differently than expected:
 1. Command seems to do nothing
 - Ensure the active file is .feature.
 
-2. Tooling not found (pnpm, bddgen, playwright)
+2. Tooling not found (bddgen, playwright)
 - Install dependencies in project, then rerun Diagnose Environment.
+- In a monorepo, commands run from the nearest `package.json` to the feature file. If the script lives in the workspace root instead, open a feature file inside that package or override `bddScenarioRunner.packageManager`.
 
-3. Wrong command behavior due to shell differences
+3. Wrong package manager invoked
+- The extension auto-detects `npm`/`yarn`/`pnpm` from the `packageManager` field in `package.json` or from lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`). Set `bddScenarioRunner.packageManager` to force a specific one.
+
+4. Wrong command behavior due to shell differences
 - Force shell via setting and retry.
 
 ## 8. Quick Validation Checklist
