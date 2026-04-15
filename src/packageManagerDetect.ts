@@ -30,11 +30,12 @@ export function getPackageManagerExecPrefix(pm: PackageManagerName): string {
  * root. Returns `stopAt` (or the top-most visited directory) when none is found.
  */
 export function findNearestPackageRoot(startPath: string, stopAt?: string): string {
-  const cacheKey = `${startPath}\u0000${stopAt ?? ""}`;
+  const startDir = path.dirname(startPath);
+  const cacheKey = `${startDir}\u0000${stopAt ?? ""}`;
   const cached = packageRootCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
-  let dir = path.dirname(startPath);
+  let dir = startDir;
   const boundary = stopAt ? path.resolve(stopAt) : undefined;
 
   while (true) {
@@ -42,7 +43,7 @@ export function findNearestPackageRoot(startPath: string, stopAt?: string): stri
       packageRootCache.set(cacheKey, dir);
       return dir;
     }
-    if (boundary && path.resolve(dir) === boundary) {
+    if (boundary && dir === boundary) {
       packageRootCache.set(cacheKey, boundary);
       return boundary;
     }
