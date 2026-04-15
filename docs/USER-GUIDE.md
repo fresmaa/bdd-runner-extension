@@ -40,7 +40,7 @@ Before running commands from VS Code:
 
 | Setting | When to change |
 | --- | --- |
-| bddScenarioRunner.packageManager | Set to `npm`, `yarn`, or `pnpm` to override auto-detection |
+| bddScenarioRunner.packageManager | Set to `npm`, `yarn`, `pnpm`, or `bun` to override auto-detection |
 | bddScenarioRunner.askRunMode | Disable if you always use one mode |
 | bddScenarioRunner.defaultRunMode | Set preferred default when prompt is off |
 | bddScenarioRunner.showTerminalOnRun | Enable if you want terminal to auto-open |
@@ -65,7 +65,7 @@ If your environment behaves differently than expected:
 - In a monorepo, commands run from the nearest `package.json` to the feature file. If the script lives in the workspace root instead, open a feature file inside that package or override `bddScenarioRunner.packageManager`.
 
 3. Wrong package manager invoked
-- The extension auto-detects `npm`/`yarn`/`pnpm` from the `packageManager` field in `package.json` or from lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`). Set `bddScenarioRunner.packageManager` to force a specific one.
+- The extension auto-detects `npm`/`yarn`/`pnpm`/`bun` from the `packageManager` field in `package.json` or from lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`, `bun.lock`, `package-lock.json`). Set `bddScenarioRunner.packageManager` to force a specific one.
 
 4. Wrong command behavior due to shell differences
 - Force shell via setting and retry.

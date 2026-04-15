@@ -19,16 +19,18 @@ function writePkg(dir: string, content: object): void {
   fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify(content));
 }
 
-test("getPackageManagerRunner maps npm to npx and leaves others", () => {
+test("getPackageManagerRunner maps npm to npx, bun to bunx, leaves others", () => {
   assert.equal(getPackageManagerRunner("npm"), "npx");
   assert.equal(getPackageManagerRunner("yarn"), "yarn");
   assert.equal(getPackageManagerRunner("pnpm"), "pnpm");
+  assert.equal(getPackageManagerRunner("bun"), "bunx");
 });
 
 test("getPackageManagerExecPrefix returns correct exec prefix", () => {
   assert.equal(getPackageManagerExecPrefix("npm"), "npx");
   assert.equal(getPackageManagerExecPrefix("yarn"), "yarn");
   assert.equal(getPackageManagerExecPrefix("pnpm"), "pnpm exec");
+  assert.equal(getPackageManagerExecPrefix("bun"), "bunx");
 });
 
 test("detectPackageManager reads packageManager field from package.json", () => {
@@ -68,9 +70,35 @@ test("detectPackageManager defaults to npm when nothing is present", () => {
 test("detectPackageManager ignores unknown packageManager values", () => {
   clearPackageManagerCache();
   const dir = mkTmp();
-  writePkg(dir, { packageManager: "bun@1.0.0" });
+  writePkg(dir, { packageManager: "deno@1.0.0" });
   fs.writeFileSync(path.join(dir, "pnpm-lock.yaml"), "");
   assert.equal(detectPackageManager(dir), "pnpm");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("detectPackageManager reads bun from packageManager field", () => {
+  clearPackageManagerCache();
+  const dir = mkTmp();
+  writePkg(dir, { packageManager: "bun@1.1.0" });
+  assert.equal(detectPackageManager(dir), "bun");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("detectPackageManager falls back to bun.lockb", () => {
+  clearPackageManagerCache();
+  const dir = mkTmp();
+  writePkg(dir, { name: "x" });
+  fs.writeFileSync(path.join(dir, "bun.lockb"), "");
+  assert.equal(detectPackageManager(dir), "bun");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("detectPackageManager falls back to bun.lock (text format)", () => {
+  clearPackageManagerCache();
+  const dir = mkTmp();
+  writePkg(dir, { name: "x" });
+  fs.writeFileSync(path.join(dir, "bun.lock"), "");
+  assert.equal(detectPackageManager(dir), "bun");
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
