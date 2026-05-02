@@ -20,6 +20,7 @@ import {
   executeCommandWithOutput,
   getRunningProcessCount,
   getConfiguredForceShell,
+  getShellExecution,
   normalizeCommandForDialect,
   onRunningProcessCountChanged,
   resolveGitBashPath,
@@ -37,12 +38,24 @@ const SHOWN_TERMINAL_WARNINGS = new Set<string>();
 let testController: vscode.TestController;
 let stopAllTestItemsRequested = false;
 let activeTestRunCount = 0;
+let runSummaryStatusBar: vscode.StatusBarItem;
+let activeTerminalRunStartedAt: number | null = null;
+let activeTerminalRunLabel: string | null = null;
+let activeTerminalRunTerminal: vscode.Terminal | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
   const stopStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1100);
   stopStatusBar.text = "$(stop-circle) Stop Playwright BDD Run";
   stopStatusBar.command = "bddScenarioRunner.stopRunning";
   stopStatusBar.tooltip = "Stop currently running BDD scenario process";
+
+  runSummaryStatusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    1090,
+  );
+  runSummaryStatusBar.text = "$(beaker) BDD: idle";
+  runSummaryStatusBar.tooltip = "Last BDD run summary";
+  runSummaryStatusBar.show();
 
   const hasActiveFeatureEditor = (): boolean => {
     const editor = vscode.window.activeTextEditor;
@@ -227,6 +240,13 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   });
 
+  const terminalCloseDisposable = vscode.window.onDidCloseTerminal((terminal) => {
+    if (terminal === activeTerminalRunTerminal) {
+      finalizeTerminalRunSummary("completed");
+      activeTerminalRunTerminal = null;
+    }
+  });
+
   context.subscriptions.push(
     runScenarioTag,
     runAtCursor,
@@ -236,12 +256,14 @@ export function activate(context: vscode.ExtensionContext): void {
     diagnoseEnvironment,
     stopRunning,
     stopStatusBar,
+    runSummaryStatusBar,
     runningProcessDisposable,
     activeEditorDisposable,
     openDocDisposable,
     changeDocDisposable,
     closeDocDisposable,
     configChangeDisposable,
+    terminalCloseDisposable,
   );
 }
 
@@ -256,7 +278,7 @@ function runCurrentFeatureByContext(
 ): void {
   const command = buildFeatureCommand(document, featureCtx, runMode);
 
-  runCommandInTerminal(command, resolveRunCwd(document));
+  runCommandInTerminal(command, resolveRunCwd(document), "Feature", runMode);
   vscode.window.showInformationMessage(`Running feature \"${featureCtx.featureName}\" (${runMode})`);
 }
 
@@ -268,7 +290,7 @@ function runScenarioByContext(
   const scenarioName = scenarioCtx.scenarioName;
   const command = buildScenarioCommand(document, scenarioCtx, runMode);
 
-  runCommandInTerminal(command, resolveRunCwd(document));
+  runCommandInTerminal(command, resolveRunCwd(document), "Scenario", runMode);
   vscode.window.showInformationMessage(`Running scenario \"${scenarioName}\" (${runMode})`);
 }
 
@@ -280,7 +302,7 @@ function runExampleByContext(
 ): void {
   const command = buildExampleCommand(document, scenarioCtx, exampleIndex, runMode);
 
-  runCommandInTerminal(command, resolveRunCwd(document));
+  runCommandInTerminal(command, resolveRunCwd(document), `Example #${exampleIndex}`, runMode);
   vscode.window.showInformationMessage(
     `Running scenario example #${exampleIndex} for \"${scenarioCtx.scenarioName}\" (${runMode})`,
   );
@@ -306,19 +328,46 @@ function runRerunFailed(runMode: RunMode): void {
     runMode,
     pm,
   });
-  runCommandInTerminal(command, cwd);
+  runCommandInTerminal(command, cwd, "Re-run failed", runMode);
   vscode.window.showInformationMessage(`Re-running failed tests (${runMode})`);
 }
 
-function runCommandInTerminal(command: string, cwd: vscode.Uri | undefined): void {
+function runCommandInTerminal(
+  command: string,
+  cwd: vscode.Uri | undefined,
+  label: string,
+  runMode: RunMode,
+): void {
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
   const terminalName = config.get<string>("terminalName", "Playwright BDD Runner");
   const autoClearTerminal = config.get<boolean>("autoClearTerminal", true);
   const showTerminalOnRun = config.get<boolean>("showTerminalOnRun", false);
+  const runBehavior = config.get<string>("terminalRunBehavior", "transient");
   const dialect = detectShellDialect();
   const normalizedCommand = normalizeCommandForDialect(command, dialect);
 
+  activeTerminalRunStartedAt = Date.now();
+  activeTerminalRunLabel = label;
+  runSummaryStatusBar.text = `$(beaker) BDD: running (${label}, ${runMode})`;
+  runSummaryStatusBar.tooltip = `BDD terminal run in progress (${label}, ${runMode})`;
+
+  if (runBehavior === "transient") {
+    const { shell, args } = getShellExecution(normalizedCommand, dialect);
+    const terminal = vscode.window.createTerminal({
+      name: terminalName,
+      cwd,
+      shellPath: shell,
+      shellArgs: args,
+    });
+    activeTerminalRunTerminal = terminal;
+    if (showTerminalOnRun) {
+      terminal.show(true);
+    }
+    return;
+  }
+
   const terminal = getOrCreateTerminal(terminalName, cwd);
+  activeTerminalRunTerminal = terminal;
   if (showTerminalOnRun) {
     terminal.show(true);
   }
@@ -335,6 +384,10 @@ async function stopRunningScenario(): Promise<void> {
   const hadActiveTestRun = activeTestRunCount > 0;
   if (hadActiveTestRun) {
     stopAllTestItemsRequested = true;
+  }
+
+  if (!hadActiveTestRun) {
+    finalizeTerminalRunSummary("stopped");
   }
 
   const config = vscode.workspace.getConfiguration("bddScenarioRunner");
@@ -533,7 +586,14 @@ async function runFromTestItems(
 
   const run = testController.createTestRun(request);
   const testItems = collectTestItems(request);
+  const runStartedAt = Date.now();
+  let passedCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let erroredCount = 0;
   let stopNoticeWritten = false;
+  runSummaryStatusBar.text = "$(beaker) BDD: running";
+  runSummaryStatusBar.tooltip = "BDD run in progress";
   const cancellationDisposable = token.onCancellationRequested(() => {
     const stoppedCount = stopRunningProcesses();
     run.appendOutput(
@@ -549,12 +609,14 @@ async function runFromTestItems(
           stopNoticeWritten = true;
         }
         run.skipped(item);
+        skippedCount += 1;
         continue;
       }
 
       const scenarioRef = TEST_DATA.get(item);
       if (!scenarioRef) {
         run.skipped(item);
+        skippedCount += 1;
         continue;
       }
 
@@ -563,6 +625,7 @@ async function runFromTestItems(
         const ctx = getScenarioContext(doc.getText(), scenarioRef.line);
         if (!ctx) {
           run.errored(item, new vscode.TestMessage("Scenario was not found."));
+          erroredCount += 1;
           continue;
         }
 
@@ -606,6 +669,7 @@ async function runFromTestItems(
             stopNoticeWritten = true;
           }
           run.skipped(item);
+          skippedCount += 1;
           continue;
         }
 
@@ -613,6 +677,7 @@ async function runFromTestItems(
           const successDetails = buildSuccessDetails(activeCommand, capturedLines);
           run.appendOutput(`\r\n[SUCCESS] Scenario passed\r\n${successDetails}\r\n`, undefined, item);
           run.passed(item);
+          passedCount += 1;
         } else {
           const reason =
             result.errorMessage ??
@@ -622,12 +687,25 @@ async function runFromTestItems(
           const details = buildFailureDetails(activeCommand, capturedLines);
           run.appendOutput(`\r\n[ERROR] ${reason}\r\n`, undefined, item);
           run.failed(item, new vscode.TestMessage(`Scenario execution failed: ${reason}\n\n${details}`));
+          failedCount += 1;
         }
       } catch (error) {
         run.errored(item, new vscode.TestMessage(String(error)));
+        erroredCount += 1;
       }
     }
   } finally {
+    const durationMs = Date.now() - runStartedAt;
+    const durationLabel = formatDuration(durationMs);
+    const summary = buildRunSummaryText({
+      passed: passedCount,
+      failed: failedCount,
+      skipped: skippedCount,
+      errored: erroredCount,
+      durationLabel,
+    });
+    runSummaryStatusBar.text = `$(beaker) ${summary}`;
+    runSummaryStatusBar.tooltip = `Last BDD run: ${summary}`;
     cancellationDisposable.dispose();
     run.end();
 
@@ -636,6 +714,50 @@ async function runFromTestItems(
       stopAllTestItemsRequested = false;
     }
   }
+}
+
+function finalizeTerminalRunSummary(reason: "stopped" | "completed"): void {
+  if (!activeTerminalRunStartedAt || !activeTerminalRunLabel) {
+    return;
+  }
+
+  const durationLabel = formatDuration(Date.now() - activeTerminalRunStartedAt);
+  const label = activeTerminalRunLabel;
+  runSummaryStatusBar.text = `$(beaker) BDD: terminal ${reason} (${label}) • ${durationLabel}`;
+  runSummaryStatusBar.tooltip = `Last terminal run ${reason} (${label}) in ${durationLabel}. Results shown in terminal.`;
+  activeTerminalRunStartedAt = null;
+  activeTerminalRunLabel = null;
+}
+
+function buildRunSummaryText(input: {
+  passed: number;
+  failed: number;
+  skipped: number;
+  errored: number;
+  durationLabel: string;
+}): string {
+  const parts = [
+    `${input.passed} passed`,
+    `${input.failed} failed`,
+    `${input.skipped} skipped`,
+    `${input.errored} errored`,
+  ];
+  return `BDD: ${parts.join(", ")} • ${input.durationLabel}`;
+}
+
+function formatDuration(durationMs: number): string {
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+
+  const seconds = durationMs / 1000;
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
 }
 
 function buildFailureDetails(command: string, lines: string[]): string {

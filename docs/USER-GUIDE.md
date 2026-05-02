@@ -25,6 +25,7 @@ Before running commands from VS Code:
 | Command | What it does | Typical use |
 | --- | --- | --- |
 | Playwright BDD Runner: Run Scenario | Runs scenario at cursor | Fast scenario-level check |
+| Playwright BDD Runner: Run at Cursor | Runs scenario or example row at cursor using default run mode | Fast iteration without run-mode prompt |
 | Playwright BDD Runner: Run Feature | Runs all scenarios in active file | Validate full feature |
 | Playwright BDD Runner: Re-run Failed | Runs last failed set | Verify bug fix quickly |
 | Playwright BDD Runner: Stop | Sends stop signal to active run | Stop long-running or stuck scenario |
@@ -35,6 +36,7 @@ Before running commands from VS Code:
 - Scenario nodes can be run directly from Testing view.
 - For Scenario Outline, example rows can be run individually.
 - This is useful for isolating specific data rows.
+- Status bar shows a summary after a Testing Panel run.
 
 ## 5. Settings You May Want to Change
 
@@ -45,6 +47,7 @@ Before running commands from VS Code:
 | bddScenarioRunner.defaultRunMode | Set preferred default when prompt is off |
 | bddScenarioRunner.showTerminalOnRun | Enable if you want terminal to auto-open |
 | bddScenarioRunner.autoClearTerminal | Disable if you want to keep previous logs |
+| bddScenarioRunner.terminalRunBehavior | Use `transient` for auto-closing per-run terminals, or `persistent` to reuse a single terminal |
 | bddScenarioRunner.forceShell | Use only when auto shell detection is not suitable |
 
 ## 6. Windows Shell Tips

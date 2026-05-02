@@ -189,6 +189,15 @@
           "default": false,
           "description": "Automatically reveal terminal when starting a run."
         },
+        "bddScenarioRunner.terminalRunBehavior": {
+          "type": "string",
+          "enum": [
+            "transient",
+            "persistent"
+          ],
+          "default": "transient",
+          "description": "Terminal run behavior. transient = new terminal per run that closes on completion; persistent = reuse terminal and keep it open."
+        },
         "bddScenarioRunner.askRunMode": {
           "type": "boolean",
           "default": true,
