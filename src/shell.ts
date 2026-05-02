@@ -39,9 +39,7 @@ export function executeCommandWithOutput(
     const emitChunk = (chunk: Buffer): void => {
       const text = chunk.toString();
       text.split(/\r?\n/).forEach((line) => {
-        if (line.length > 0) {
-          onLine(line);
-        }
+        onLine(line);
       });
     };
 

@@ -493,70 +493,10 @@ async function runFromTestItems(
     );
   });
 
-  for (const item of testItems) {
-    if (token.isCancellationRequested || stopAllTestItemsRequested) {
-      if (stopAllTestItemsRequested && !stopNoticeWritten) {
-        run.appendOutput("\r\n[INFO] Stopped by user. Remaining scenarios in this feature run were cancelled.\r\n");
-        stopNoticeWritten = true;
-      }
-      run.skipped(item);
-      continue;
-    }
-
-    const scenarioRef = TEST_DATA.get(item);
-    if (!scenarioRef) {
-      run.skipped(item);
-      continue;
-    }
-
-    try {
-      const doc = await vscode.workspace.openTextDocument(scenarioRef.uri);
-      const ctx = getScenarioContext(doc.getText(), scenarioRef.line);
-      if (!ctx) {
-        run.errored(item, new vscode.TestMessage("Scenario was not found."));
-        continue;
-      }
-
-      run.started(item);
-      const command =
-        scenarioRef.kind === "example" && scenarioRef.exampleIndex
-          ? buildExampleCommand(doc, ctx, scenarioRef.exampleIndex, runMode)
-          : buildScenarioCommand(doc, ctx, runMode);
-      const cwd = resolveRunCwd(doc)?.fsPath;
-
-      let outputBuffer = `$ ${command}\r\n`;
-      run.appendOutput(`$ ${command}\r\n`, undefined, item);
-
-      const capturedLines: string[] = [];
-      let activeCommand = command;
-      let result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
-        outputBuffer += `${line}\r\n`;
-        capturedLines.push(stripAnsi(line));
-        run.appendOutput(`${line}\r\n`, undefined, item);
-      });
-
-      if (!result.success && shouldRetryWithFlexibleGrep(capturedLines)) {
-        const retryCommand = replaceGrepPattern(activeCommand, buildFlexibleScenarioPattern(ctx.scenarioName));
-        if (retryCommand && retryCommand !== activeCommand) {
-          run.appendOutput(
-            "\r\n[INFO] No tests found with exact grep. Retrying with flexible scenario pattern...\r\n",
-            undefined,
-            item,
-          );
-          activeCommand = retryCommand;
-          run.appendOutput(`$ ${activeCommand}\r\n`, undefined, item);
-          outputBuffer += `$ ${activeCommand}\r\n`;
-
-          result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
-            outputBuffer += `${line}\r\n`;
-            capturedLines.push(stripAnsi(line));
-            run.appendOutput(`${line}\r\n`, undefined, item);
-          });
-        }
-      }
-
-      if (stopAllTestItemsRequested) {
-        if (!stopNoticeWritten) {
+  try {
+    for (const item of testItems) {
+      if (token.isCancellationRequested || stopAllTestItemsRequested) {
+        if (stopAllTestItemsRequested && !stopNoticeWritten) {
           run.appendOutput("\r\n[INFO] Stopped by user. Remaining scenarios in this feature run were cancelled.\r\n");
           stopNoticeWritten = true;
         }
@@ -564,35 +504,89 @@ async function runFromTestItems(
         continue;
       }
 
-      if (outputBuffer.trim().length > 0) {
-        run.appendOutput(`${outputBuffer}\r\n`, undefined, item);
+      const scenarioRef = TEST_DATA.get(item);
+      if (!scenarioRef) {
+        run.skipped(item);
+        continue;
       }
 
-      if (result.success) {
-        const successDetails = buildSuccessDetails(activeCommand, capturedLines);
-        run.appendOutput(`\r\n[SUCCESS] Scenario passed\r\n${successDetails}\r\n`, undefined, item);
-        run.passed(item);
-      } else {
-        const reason =
-          result.errorMessage ??
-          (result.exitCode !== null
-            ? `Process exited with code ${result.exitCode}.`
-            : "Scenario execution failed.");
-        const details = buildFailureDetails(activeCommand, capturedLines);
-        run.appendOutput(`\r\n[ERROR] ${reason}\r\n`, undefined, item);
-        run.failed(item, new vscode.TestMessage(`Scenario execution failed: ${reason}\n\n${details}`));
+      try {
+        const doc = await vscode.workspace.openTextDocument(scenarioRef.uri);
+        const ctx = getScenarioContext(doc.getText(), scenarioRef.line);
+        if (!ctx) {
+          run.errored(item, new vscode.TestMessage("Scenario was not found."));
+          continue;
+        }
+
+        run.started(item);
+        const command =
+          scenarioRef.kind === "example" && scenarioRef.exampleIndex
+            ? buildExampleCommand(doc, ctx, scenarioRef.exampleIndex, runMode)
+            : buildScenarioCommand(doc, ctx, runMode);
+        const cwd = resolveRunCwd(doc)?.fsPath;
+
+        run.appendOutput(`$ ${command}\r\n`, undefined, item);
+
+        const capturedLines: string[] = [];
+        let activeCommand = command;
+        let result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
+          capturedLines.push(stripAnsi(line));
+          run.appendOutput(`${line}\r\n`, undefined, item);
+        });
+
+        if (!result.success && shouldRetryWithFlexibleGrep(capturedLines)) {
+          const retryCommand = replaceGrepPattern(activeCommand, buildFlexibleScenarioPattern(ctx.scenarioName));
+          if (retryCommand && retryCommand !== activeCommand) {
+            run.appendOutput(
+              "\r\n[INFO] No tests found with exact grep. Retrying with flexible scenario pattern...\r\n",
+              undefined,
+              item,
+            );
+            activeCommand = retryCommand;
+            run.appendOutput(`$ ${activeCommand}\r\n`, undefined, item);
+
+            result = await executeCommandWithOutput(activeCommand, cwd, (line) => {
+              capturedLines.push(stripAnsi(line));
+              run.appendOutput(`${line}\r\n`, undefined, item);
+            });
+          }
+        }
+
+        if (stopAllTestItemsRequested) {
+          if (!stopNoticeWritten) {
+            run.appendOutput("\r\n[INFO] Stopped by user. Remaining scenarios in this feature run were cancelled.\r\n");
+            stopNoticeWritten = true;
+          }
+          run.skipped(item);
+          continue;
+        }
+
+        if (result.success) {
+          const successDetails = buildSuccessDetails(activeCommand, capturedLines);
+          run.appendOutput(`\r\n[SUCCESS] Scenario passed\r\n${successDetails}\r\n`, undefined, item);
+          run.passed(item);
+        } else {
+          const reason =
+            result.errorMessage ??
+            (result.exitCode !== null
+              ? `Process exited with code ${result.exitCode}.`
+              : "Scenario execution failed.");
+          const details = buildFailureDetails(activeCommand, capturedLines);
+          run.appendOutput(`\r\n[ERROR] ${reason}\r\n`, undefined, item);
+          run.failed(item, new vscode.TestMessage(`Scenario execution failed: ${reason}\n\n${details}`));
+        }
+      } catch (error) {
+        run.errored(item, new vscode.TestMessage(String(error)));
       }
-    } catch (error) {
-      run.errored(item, new vscode.TestMessage(String(error)));
     }
-  }
+  } finally {
+    cancellationDisposable.dispose();
+    run.end();
 
-  cancellationDisposable.dispose();
-  run.end();
-
-  activeTestRunCount = Math.max(0, activeTestRunCount - 1);
-  if (activeTestRunCount === 0) {
-    stopAllTestItemsRequested = false;
+    activeTestRunCount = Math.max(0, activeTestRunCount - 1);
+    if (activeTestRunCount === 0) {
+      stopAllTestItemsRequested = false;
+    }
   }
 }
 
