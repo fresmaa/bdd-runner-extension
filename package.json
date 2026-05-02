@@ -42,6 +42,15 @@
         }
       },
       {
+        "command": "bddScenarioRunner.runAtCursor",
+        "title": "Run at Cursor",
+        "category": "Playwright BDD Runner",
+        "icon": {
+          "light": "docs/images/icon-run.png",
+          "dark": "docs/images/icon-run.png"
+        }
+      },
+      {
         "command": "bddScenarioRunner.runScenarioTagAtLine",
         "title": "Run Scenario at Line",
         "category": "Playwright BDD Runner"
@@ -87,6 +96,11 @@
           "group": "navigation@20"
         },
         {
+          "command": "bddScenarioRunner.runAtCursor",
+          "when": "resourceExtname == .feature",
+          "group": "navigation@20"
+        },
+        {
           "command": "bddScenarioRunner.runCurrentFeature",
           "when": "resourceExtname == .feature",
           "group": "navigation@21"
@@ -104,6 +118,10 @@
       "commandPalette": [
         {
           "command": "bddScenarioRunner.runScenarioTag",
+          "when": "resourceExtname == .feature"
+        },
+        {
+          "command": "bddScenarioRunner.runAtCursor",
           "when": "resourceExtname == .feature"
         },
         {

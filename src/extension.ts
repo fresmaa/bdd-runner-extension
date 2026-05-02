@@ -93,6 +93,39 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   );
 
+  const runAtCursor = vscode.commands.registerCommand(
+    "bddScenarioRunner.runAtCursor",
+    async (input?: RunCommandInput) => {
+      const editor = await resolveEditor(input);
+      if (!editor) {
+        vscode.window.showWarningMessage("No active editor found.");
+        return;
+      }
+      if (!editor.document.fileName.endsWith(".feature")) {
+        vscode.window.showWarningMessage("This command only works for .feature files.");
+        return;
+      }
+
+      const targetLine = input?.line ?? editor.selection.active.line;
+      const scenarioCtx = getScenarioContext(editor.document.getText(), targetLine);
+      if (!scenarioCtx) {
+        vscode.window.showWarningMessage("No scenario found at current cursor position.");
+        return;
+      }
+
+      const config = vscode.workspace.getConfiguration("bddScenarioRunner");
+      const runMode = config.get<RunMode>("defaultRunMode", "headless");
+      const exampleRow = scenarioCtx.exampleRows.find((row) => row.line === targetLine);
+
+      if (scenarioCtx.isOutline && exampleRow?.exampleIndex) {
+        runExampleByContext(editor.document, scenarioCtx, exampleRow.exampleIndex, runMode);
+        return;
+      }
+
+      runScenarioByContext(editor.document, scenarioCtx, runMode);
+    },
+  );
+
   const runScenarioTagAtLine = vscode.commands.registerCommand(
     "bddScenarioRunner.runScenarioTagAtLine",
     async (uri: vscode.Uri, line: number) => {
@@ -196,6 +229,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     runScenarioTag,
+    runAtCursor,
     runScenarioTagAtLine,
     runCurrentFeature,
     rerunFailed,
@@ -236,6 +270,20 @@ function runScenarioByContext(
 
   runCommandInTerminal(command, resolveRunCwd(document));
   vscode.window.showInformationMessage(`Running scenario \"${scenarioName}\" (${runMode})`);
+}
+
+function runExampleByContext(
+  document: vscode.TextDocument,
+  scenarioCtx: ScenarioContext,
+  exampleIndex: number,
+  runMode: RunMode,
+): void {
+  const command = buildExampleCommand(document, scenarioCtx, exampleIndex, runMode);
+
+  runCommandInTerminal(command, resolveRunCwd(document));
+  vscode.window.showInformationMessage(
+    `Running scenario example #${exampleIndex} for \"${scenarioCtx.scenarioName}\" (${runMode})`,
+  );
 }
 
 function runRerunFailed(runMode: RunMode): void {
